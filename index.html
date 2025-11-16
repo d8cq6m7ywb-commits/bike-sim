@@ -1645,7 +1645,16 @@
         const routeSearchEl = document.getElementById('routeSearch');
         const resetRouteBtn = document.getElementById('resetRouteBtn');
         const routeMetaEl = document.getElementById('routeMeta');
-
+// Load a route whenever the dropdown changes
+routeSelectEl.addEventListener('change', (e) => {
+  const key = e.target.value;
+  if (key) {
+    loadRoute(key);
+  } else {
+    clearRouteView();
+    localStorage.removeItem('bikesim_last_route');
+  }
+});
         async function loadRoute(key) {
           if (!key) return;
           const meta = ROUTE_INDEX[key];
@@ -1762,10 +1771,15 @@
 }
 
         routeSearchEl.addEventListener('input', (e) => {
-          const text = e.target.value;
-          rebuildRouteOptions(text);
-          clearRouteView();
-        });
+  const text = e.target.value;
+  rebuildRouteOptions(text);
+
+  // Only clear everything when the search box is emptied
+  if (!text) {
+    clearRouteView();
+    localStorage.removeItem('bikesim_last_route');
+  }
+});
 
         resetRouteBtn.addEventListener('click', () => {
           routeSearchEl.value = '';
