@@ -241,7 +241,7 @@
         margin-top:6px;
         font-size:13px;
         color:#444;
-        text-align:right; /* move to right bottom corner */
+        text-align:right;
       }
 
       /* Technical challenges block */
@@ -300,9 +300,9 @@
         <label for="routeSearch">Search race:</label>
         <input id="routeSearch" type="text" placeholder="Type part of race name..." />
         <label for="routeSelect">Route:</label>
- <select id="routeSelect">
-  <option value="">— No route selected —</option>
-</select>
+        <select id="routeSelect">
+          <option value="">— No route selected —</option>
+        </select>
         <button id="resetRouteBtn" type="button">Reset</button>
         <div class="route__meta" id="routeMeta">No route selected. You can still enter distance, climb, and altitude manually.</div>
       </div>
@@ -681,110 +681,177 @@
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script>
         // Route index for lazy-loaded JSON files
-      const ROUTE_INDEX = {
-  "im_california": {
-    name: "IM California",
-    file: "routes/IM_California.json"
-  },
-  "im_vittoria_gasteiz": {
-    name: "IM Vittoria Gasteiz",
-    file: "routes/IM_Vittoria_Gasteiz.json"
-  },
-  "im703_la_quinta": {
-    name: "IM703 La Quinta",
-    file: "routes/IM70.3_La_Quinta.json"
-  },
-  "im703_vichy": {
-    name: "IM703 Vichy",
-    file: "routes/IM70.3_Vichy.json"
-  },
-  "im703_texas_galveston": {
-    name: "IM703 Texas Galveston",
-    file: "routes/IM70.3_Texas_Galveston.json"
-  },
-  "im703_florida": {
-    name: "IM703 Florida",
-    file: "routes/IM70.3_Florida.json"
-  },
-  "im703_north_carolina": {
-    name: "IM703 North Carolina",
-    file: "routes/IM70.3_North_Carolina.json"
-  },
-  "im703_northern_california": {
-    name: "IM703 Northern California",
-    file: "routes/IM70.3_Northern_California.json"
-  },
-  "im703_sables_d_olonne": {
-    name: "IM703 Les Sables d’Olonne",
-    file: "routes/IM70.3_Sables_d_Olonne.json"
-  },
-  "im703_hawaii": {
-    name: "IM703 Hawaii",
-    file: "routes/IM70.3_Hawaii.json"   // make sure the file is really named exactly this
-  },
-  "im_frankfurt": {
-    name: "IM Frankfurt",
-    file: "routes/IM_frankfurt.json"
-  },
-  "im_arizona": {
-    name: "IM Arizona",
-    file: "routes/IM_Arizona.json"
-  },
-  "im_florida": {
-    name: "IM Florida",
-    file: "routes/IM_Florida.json"
-  },
-  "im_sables_d_olonne": {
-    name: "IM Les Sables d’Olonne",
-    file: "routes/IM_Sables_d_Olonne.json"
-  },
-  "im_tallinn": {
-    name: "IM Tallinn",
-    file: "routes/IM_Tallinn.json"
-  },
-  "im_nice": {
-    name: "IM Nice",
-    file: "routes/IM_Nice.json"
-  },
-  "kona_2024": {
-    name: "IM World Championship Kona 2024",
-    file: "routes/IM_Kona.json"
-  },
-  "hamburg_2025": {
-    name: "IRONMAN Hamburg 2025",
-    file: "routes/IM_Hamburg.json"
-  },
+        const ROUTE_INDEX = {
+          "im_california": {
+            name: "IM California",
+            file: "routes/IM_California.json"
+          },
+          "im_vittoria_gasteiz": {
+            name: "IM Vittoria Gasteiz",
+            file: "routes/IM_Vittoria_Gasteiz.json"
+          },
+          "im703_la_quinta": {
+            name: "IM703 La Quinta",
+            file: "routes/IM70.3_La_Quinta.json"
+          },
+          "im703_vichy": {
+            name: "IM703 Vichy",
+            file: "routes/IM70.3_Vichy.json"
+          },
+          "im703_texas_galveston": {
+            name: "IM703 Texas Galveston",
+            file: "routes/IM70.3_Texas_Galveston.json"
+          },
+          "im703_florida": {
+            name: "IM703 Florida",
+            file: "routes/IM70.3_Florida.json"
+          },
+          "im703_north_carolina": {
+            name: "IM703 North Carolina",
+            file: "routes/IM70.3_North_Carolina.json"
+          },
+          "im703_northern_california": {
+            name: "IM703 Northern California",
+            file: "routes/IM70.3_Northern_California.json"
+          },
+          "im703_sables_d_olonne": {
+            name: "IM703 Les Sables d’Olonne",
+            file: "routes/IM70.3_Sables_d_Olonne.json"
+          },
+          "im703_hawaii": {
+            name: "IM703 Hawaii",
+            file: "routes/IM70.3_Hawaii.json"
+          },
+          "im_frankfurt": {
+            name: "IM Frankfurt",
+            file: "routes/IM_frankfurt.json"
+          },
+          "im_arizona": {
+            name: "IM Arizona",
+            file: "routes/IM_Arizona.json"
+          },
+          "im_florida": {
+            name: "IM Florida",
+            file: "routes/IM_Florida.json"
+          },
+          "im_sables_d_olonne": {
+            name: "IM Les Sables d’Olonne",
+            file: "routes/IM_Sables_d_Olonne.json"
+          },
+          "im_tallinn": {
+            name: "IM Tallinn",
+            file: "routes/IM_Tallinn.json"
+          },
+          "im_nice": {
+            name: "IM Nice",
+            file: "routes/IM_Nice.json"
+          },
+          "kona_2024": {
+            name: "IM World Championship Kona 2024",
+            file: "routes/IM_Kona.json"
+          },
+          "hamburg_2025": {
+            name: "IRONMAN Hamburg 2025",
+            file: "routes/IM_Hamburg.json"
+          },
+          "challenge_roth": {
+            name: "Challenge Roth",
+            file: "routes/Challenge_Roth.json"
+          },
+          "challenge_israman": {
+            name: "Challenge Israman",
+            file: "routes/Challenge_Israman.json"
+          },
+          "challenge703_israman": {
+            name: "Challenge703 Israman",
+            file: "routes/Challenge70.3_Israman.json"
+          },
+          "challenge703_rio": {
+            name: "Challenge703 Rio de Janeiro",
+            file: "routes/Challenge70.3_Rio_de_Janeiro.json"
+          },
+          "challenge703_oman": {
+            name: "Challenge703 Oman",
+            file: "routes/Challenge70.3_Oman.json"
+          },
+          "challenge703_sir_bani_yas": {
+            name: "Challenge703 Sir Bani Yas",
+            file: "routes/Challenge70.3_Sir_Bani_Yas.json"
+          },
+          "im703_tallinn": {
+            name: "IM703 Tallinn",
+            file: "routes/IM70.3_Tallinn.json"
+          }
+        };
 
-  "challenge_roth": {
-    name: "Challenge Roth",
-    file: "routes/Challenge_Roth.json"
-  },
-  "challenge_israman": {
-    name: "Challenge Israman",
-    file: "routes/Challenge_Israman.json"
-  },
-  "challenge703_israman": {
-    name: "Challenge703 Israman",
-    file: "routes/Challenge70.3_Israman.json"
-  },
-  "challenge703_rio": {
-    name: "Challenge703 Rio de Janeiro",
-    file: "routes/Challenge70.3_Rio_de_Janeiro.json"
-  },
-  "challenge703_oman": {
-    name: "Challenge703 Oman",
-    file: "routes/Challenge70.3_Oman.json"
-  },
-  "challenge703_sir_bani_yas": {
-    name: "Challenge703 Sir Bani Yas",
-    file: "routes/Challenge70.3_Sir_Bani_Yas.json"
-  },
+        // --- NEW: normalisation of route profile (distances, climb, elevation range) ---
+        function normalizeRouteProfile(raw, meta) {
+          const r = Object.assign({}, raw);
 
-  "im703_tallinn": {
-    name: "IM703 Tallinn",
-    file: "routes/IM70.3_Tallinn.json"
-  }
-};
+          // Ensure distances array is numeric
+          if (Array.isArray(r.distances) && r.distances.length > 1) {
+            let dist = r.distances.map(v => (typeof v === "number" ? v : parseFloat(v) || 0));
+            let maxDist = dist[dist.length - 1];
+
+            // 1) If last distance > 500 → treat as meters, convert to km
+            if (maxDist > 500) {
+              dist = dist.map(v => v / 1000);
+              maxDist = dist[dist.length - 1];
+            }
+
+            // 2) If distances look 0–1 but distance_km is defined and clearly larger → rescale
+            if (typeof r.distance_km === "number" && r.distance_km > 0) {
+              if (maxDist > 0 && maxDist < 5 && r.distance_km > 5) {
+                const factor = r.distance_km / maxDist;
+                dist = dist.map(v => v * factor);
+                maxDist = dist[dist.length - 1];
+              }
+            }
+
+            r.distances = dist;
+
+            // If distance_km missing or bogus, sync from normalised distances
+            if (!(typeof r.distance_km === "number" && r.distance_km > 0)) {
+              r.distance_km = maxDist;
+            }
+          }
+
+          // Elevations: numeric, plus climb & min/max
+          if (Array.isArray(r.elevations) && r.elevations.length > 1) {
+            const elev = r.elevations.map(v => (typeof v === "number" ? v : parseFloat(v) || 0));
+            r.elevations = elev;
+
+            // Recompute total climb if missing or ≤ 0
+            const needClimb =
+              !(typeof r.total_climb_m === "number") || r.total_climb_m <= 0;
+            if (needClimb) {
+              let climb = 0;
+              for (let i = 1; i < elev.length; i++) {
+                const d = elev[i] - elev[i - 1];
+                if (d > 0) climb += d;
+              }
+              r.total_climb_m = Math.round(climb);
+            }
+
+            // Derive elev_min / elev_max if absent
+            let eMin = elev[0];
+            let eMax = elev[0];
+            for (let i = 1; i < elev.length; i++) {
+              if (elev[i] < eMin) eMin = elev[i];
+              if (elev[i] > eMax) eMax = elev[i];
+            }
+            if (typeof r.elev_min !== "number") r.elev_min = eMin;
+            if (typeof r.elev_max !== "number") r.elev_max = eMax;
+          }
+
+          // Backfill name from index if needed
+          if (!r.name && meta && meta.name) {
+            r.name = meta.name;
+          }
+
+          return r;
+        }
+
         function changeTyreCondition(){
           document.getElementById("crr_rolling").value = document.getElementById("tyreCondition").value;
           calculateResult();
@@ -1645,16 +1712,18 @@
         const routeSearchEl = document.getElementById('routeSearch');
         const resetRouteBtn = document.getElementById('resetRouteBtn');
         const routeMetaEl = document.getElementById('routeMeta');
-// Load a route whenever the dropdown changes
-routeSelectEl.addEventListener('change', (e) => {
-  const key = e.target.value;
-  if (key) {
-    loadRoute(key);
-  } else {
-    clearRouteView();
-    localStorage.removeItem('bikesim_last_route');
-  }
-});
+
+        // Load a route whenever the dropdown changes
+        routeSelectEl.addEventListener('change', (e) => {
+          const key = e.target.value;
+          if (key) {
+            loadRoute(key);
+          } else {
+            clearRouteView();
+            localStorage.removeItem('bikesim_last_route');
+          }
+        });
+
         async function loadRoute(key) {
           if (!key) return;
           const meta = ROUTE_INDEX[key];
@@ -1665,18 +1734,27 @@ routeSelectEl.addEventListener('change', (e) => {
             if (!res.ok) {
               throw new Error('HTTP ' + res.status);
             }
-            const r = await res.json();
+
+            let raw = await res.json();
+            const r = normalizeRouteProfile(raw, meta);
             window.currentRouteProfile = r;
 
+            // Draw polyline on map
             if (polyline) {
               map.removeLayer(polyline);
             }
-            polyline = L.polyline(r.latlngs, { weight: 4, color: '#ef4444' }).addTo(map);
-            map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+            if (Array.isArray(r.latlngs) && r.latlngs.length) {
+              polyline = L.polyline(r.latlngs, { weight: 4, color: '#ef4444' }).addTo(map);
+              map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+            } else {
+              polyline = null;
+              map.setView([0, 0], 2);
+            }
 
             const currentUnits = document.getElementById('unit').value || 'metric';
             updateChartUnits(currentUnits);
 
+            // Sync main distance / climb fields from normalised profile
             if (typeof r.distance_km === 'number') {
               document.getElementById('distance-km').value = r.distance_km.toFixed(1);
               const mi = r.distance_km/1.60934;
@@ -1694,10 +1772,22 @@ routeSelectEl.addEventListener('change', (e) => {
               document.getElementById('altitude').value = Math.round(startAlt);
             }
 
-            const distTot = r.distance_km || 0;
-            const climbTot = r.total_climb_m || 0;
-            const avgGrade = distTot > 0 ? (climbTot/(distTot*10)) : 0;
-            routeMetaEl.textContent = `${r.name} – ${distTot.toFixed(1)} km, climb ≈ ${climbTot.toFixed(0)} m (avg grade ≈ ${avgGrade.toFixed(1)}%), elevation ${r.elev_min}–${r.elev_max} m`;
+            // Meta text using normalised values
+            const distTot = (typeof r.distance_km === 'number') ? r.distance_km : 0;
+            const climbTot = (typeof r.total_climb_m === 'number') ? r.total_climb_m : 0;
+            let metaText = r.name || (meta && meta.name) || key || 'Selected route';
+
+            if (distTot > 0) {
+              const avgGradePct = climbTot > 0 ? (climbTot / (distTot * 10)) : 0; // same formula as before
+              metaText += ` – ${distTot.toFixed(1)} km, climb ≈ ${climbTot.toFixed(0)} m`;
+              if (climbTot > 0) {
+                metaText += ` (avg grade ≈ ${avgGradePct.toFixed(1)}%)`;
+              }
+            }
+            if (typeof r.elev_min === "number" && typeof r.elev_max === "number") {
+              metaText += `, elevation ${r.elev_min.toFixed(0)}–${r.elev_max.toFixed(0)} m`;
+            }
+            routeMetaEl.textContent = metaText;
 
             localStorage.setItem('bikesim_last_route', key);
 
@@ -1731,55 +1821,55 @@ routeSelectEl.addEventListener('change', (e) => {
           }
         }
 
-      function rebuildRouteOptions(filterText) {
-  const txt = (filterText || '').toLowerCase();
+        function rebuildRouteOptions(filterText) {
+          const txt = (filterText || '').toLowerCase();
 
-  // Clear existing options
-  while (routeSelectEl.options.length > 0) {
-    routeSelectEl.remove(0);
-  }
+          // Clear existing options
+          while (routeSelectEl.options.length > 0) {
+            routeSelectEl.remove(0);
+          }
 
-  // Default “no route” option
-  const defaultOpt = document.createElement('option');
-  defaultOpt.value = '';
-  defaultOpt.textContent = '— No route selected —';
-  routeSelectEl.appendChild(defaultOpt);
+          // Default “no route” option
+          const defaultOpt = document.createElement('option');
+          defaultOpt.value = '';
+          defaultOpt.textContent = '— No route selected —';
+          routeSelectEl.appendChild(defaultOpt);
 
-  // Sort all routes alphabetically by display name
-  const entries = Object.entries(ROUTE_INDEX)
-    .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+          // Sort all routes alphabetically by display name
+          const entries = Object.entries(ROUTE_INDEX)
+            .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
 
-  entries.forEach(([key, meta]) => {
-    const name = meta.name || key;
-    const haystack = (name + ' ' + key).toLowerCase();
+          entries.forEach(([key, meta]) => {
+            const name = meta.name || key;
+            const haystack = (name + ' ' + key).toLowerCase();
 
-    if (!txt || haystack.includes(txt)) {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = name;
-      routeSelectEl.appendChild(opt);
-    }
-  });
+            if (!txt || haystack.includes(txt)) {
+              const opt = document.createElement('option');
+              opt.value = key;
+              opt.textContent = name;
+              routeSelectEl.appendChild(opt);
+            }
+          });
 
-  // Auto-select single match when searching
-  if (filterText && routeSelectEl.options.length === 2) {
-    routeSelectEl.selectedIndex = 1;
-    loadRoute(routeSelectEl.value);
-  } else {
-    routeSelectEl.value = '';
-  }
-}
+          // Auto-select single match when searching
+          if (filterText && routeSelectEl.options.length === 2) {
+            routeSelectEl.selectedIndex = 1;
+            loadRoute(routeSelectEl.value);
+          } else {
+            routeSelectEl.value = '';
+          }
+        }
 
         routeSearchEl.addEventListener('input', (e) => {
-  const text = e.target.value;
-  rebuildRouteOptions(text);
+          const text = e.target.value;
+          rebuildRouteOptions(text);
 
-  // Only clear everything when the search box is emptied
-  if (!text) {
-    clearRouteView();
-    localStorage.removeItem('bikesim_last_route');
-  }
-});
+          // Only clear everything when the search box is emptied
+          if (!text) {
+            clearRouteView();
+            localStorage.removeItem('bikesim_last_route');
+          }
+        });
 
         resetRouteBtn.addEventListener('click', () => {
           routeSearchEl.value = '';
