@@ -1053,8 +1053,8 @@
           <strong>Notes:</strong> Air density is computed from standard
           atmosphere (altitude) plus temperature and relative humidity (Tetens
           saturation vapor pressure → partial pressures). Rolling resistance
-          uses the normal force on a grade (× cos θ). Headwind positive,
-          tailwind negative; drag depends on relative airspeed.
+          uses the normal force on a grade (× cos θ). Headwind positive, tailwind
+          negative; drag depends on relative airspeed.
         </div>
 
         <button id="toggleCourseAnalysis" class="courseToggleBtn">
@@ -1077,10 +1077,7 @@
 
           <section class="advancedPacing__section">
             <h3 class="heading__tertiary--calc">Advanced pacing (beta)</h3>
-            <div
-              id="advancedPacing"
-              class="advanced-pacing-placeholder"
-            >
+            <div id="advancedPacing" class="advanced-pacing-placeholder">
               Advanced pacing will appear here when you select “Power strategy
               (advanced)” and a route.
             </div>
@@ -1089,17 +1086,14 @@
           <section class="techChallenges__section">
             <h3>Technical challenges</h3>
             <div id="techChallenges">
-              <p
-                style="margin: 0; font-size: 13px; color: #92400e"
-              >
+              <p style="margin: 0; font-size: 13px; color: #92400e">
                 Select a route above to list climbs ≥ 3%, descents ≤ −3%, and
                 sharp turns (&gt; 80°).
               </p>
             </div>
             <div class="techNote">
-              Thresholds: segments are grouped by continuous grade ≥ 3%
-              (climbs) or ≤ −3% (descents). Sharp turns are heading changes
-              &gt; 80°.
+              Thresholds: segments are grouped by continuous grade ≥ 3% (climbs)
+              or ≤ −3% (descents). Sharp turns are heading changes &gt; 80°.
             </div>
           </section>
         </div>
@@ -1112,319 +1106,209 @@
       ></script>
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script>
-        // Route index for lazy-loaded JSON files (display name is what you see in the dropdown)
-       const ROUTE_INDEX = {
-  /* ----------------- Challenge full & 70.3 ----------------- */
-  "challenge_roth": {
-    name: "Challenge Roth",
-    file: "routes/Challenge_Roth.json"
-  },
-  "challenge_israman": {
-    name: "Challenge Israman",
-    file: "routes/Challenge_Israman.json"
-  },
-  "challenge703_israman": {
-    name: "Challenge703 Israman",
-    file: "routes/Challenge70.3_Israman.json"
-  },
-  "challenge703_oman": {
-    name: "Challenge703 Oman",
-    file: "routes/Challenge70.3_Oman.json"
-  },
-  "challenge703_rio": {
-    name: "Challenge703 Rio de Janeiro",
-    file: "routes/Challenge70.3_Rio_de_Janeiro.json"
-  },
-  "challenge703_sir_bani_yas": {
-    name: "Challenge703 Sir Bani Yas",
-    file: "routes/Challenge70.3_Sir_Bani_Yas.json"
-  },
+        /* ------------ Route index (dropdown options) ------------- */
+        const ROUTE_INDEX = {
+          /* Challenge full & 70.3 */
+          challenge_roth: {
+            name: "Challenge Roth",
+            file: "routes/Challenge_Roth.json",
+          },
+          challenge_israman: {
+            name: "Challenge Israman",
+            file: "routes/Challenge_Israman.json",
+          },
+          challenge703_israman: {
+            name: "Challenge703 Israman",
+            file: "routes/Challenge70.3_Israman.json",
+          },
+          challenge703_oman: {
+            name: "Challenge703 Oman",
+            file: "routes/Challenge70.3_Oman.json",
+          },
+          challenge703_rio: {
+            name: "Challenge703 Rio de Janeiro",
+            file: "routes/Challenge70.3_Rio_de_Janeiro.json",
+          },
+          challenge703_sir_bani_yas: {
+            name: "Challenge703 Sir Bani Yas",
+            file: "routes/Challenge70.3_Sir_Bani_Yas.json",
+          },
 
-  /* ----------------- IM 70.3 races ----------------- */
-  "im703_florida": {
-    name: "IM703 Florida",
-    file: "routes/IM70.3_Florida.json"
-  },
-  "im703_hawaii": {
-    name: "IM703 Hawaii",
-    file: "routes/IM70.3_Hawaii.json"
-  },
-  "im703_la_quinta": {
-    name: "IM703 La Quinta",
-    file: "routes/IM70.3_La_Quinta.json"
-  },
-  "im703_north_carolina": {
-    name: "IM703 North Carolina",
-    file: "routes/IM70.3_North_Carolina.json"
-  },
-  "im703_northern_california": {
-    name: "IM703 Northern California",
-    file: "routes/IM70.3_Northern_California.json"
-  },
-  "im703_sables_d_olonne": {
-    name: "IM703 Les Sables d’Olonne",
-    file: "routes/IM70.3_Sables_d_Olonne.json"
-  },
-  "im703_tallinn": {
-    name: "IM703 Tallinn",
-    file: "routes/im70_3_tallinn.json"   // new cleaned 70.3 Tallinn JSON
-  },
-  "im703_texas_galveston": {
-    name: "IM703 Texas Galveston",
-    file: "routes/IM70.3_Texas_Galveston.json"
-  },
-  "im703_vichy": {
-    name: "IM703 Vichy",
-    file: "routes/IM70.3_Vichy.json"
-  },
-  "im703_shanghai": {
-    name: "IM703 Shanghai",
-    file: "routes/im70_3_shanghai.json"
-  },
+          /* IM 70.3 */
+          im703_florida: {
+            name: "IM703 Florida",
+            file: "routes/IM70.3_Florida.json",
+          },
+          im703_hawaii: {
+            name: "IM703 Hawaii",
+            file: "routes/IM70.3_Hawaii.json",
+          },
+          im703_la_quinta: {
+            name: "IM703 La Quinta",
+            file: "routes/IM70.3_La_Quinta.json",
+          },
+          im703_north_carolina: {
+            name: "IM703 North Carolina",
+            file: "routes/IM70.3_North_Carolina.json",
+          },
+          im703_northern_california: {
+            name: "IM703 Northern California",
+            file: "routes/IM70.3_Northern_California.json",
+          },
+          im703_sables_d_olonne: {
+            name: "IM703 Les Sables d’Olonne",
+            file: "routes/IM70.3_Sables_d_Olonne.json",
+          },
+          im703_tallinn: {
+            name: "IM703 Tallinn",
+            file: "routes/im70_3_tallinn.json",
+          },
+          im703_texas_galveston: {
+            name: "IM703 Texas Galveston",
+            file: "routes/IM70.3_Texas_Galveston.json",
+          },
+          im703_vichy: {
+            name: "IM703 Vichy",
+            file: "routes/IM70.3_Vichy.json",
+          },
+          im703_shanghai: {
+            name: "IM703 Shanghai",
+            file: "routes/im70_3_shanghai.json",
+          },
 
-  /* ----------------- IM full-distance races ----------------- */
-  "im_arizona": {
-    name: "IM Arizona",
-    file: "routes/IM_Arizona.json"
-  },
-  "im_australia": {
-    name: "IM Australia",
-    file: "routes/IM_Australia.json"
-  },
-  "im_barcelona": {
-    name: "IM Barcelona",
-    file: "routes/IM_Barcelona.json"
-  },
-  "im_brazil": {
-    name: "IM Brazil",
-    file: "routes/IM_Brazil.json"
-  },
-  "im_cairns": {
-    name: "IM Cairns",
-    file: "routes/IM_Cairns.json"
-  },
-  "im_california": {
-    name: "IM California",
-    file: "routes/IM_California.json"
-  },
-  "im_cascais": {
-    name: "IM Cascais",
-    file: "routes/IM_Cascais.json"
-  },
-  "im_cozumel": {
-    name: "IM Cozumel",
-    file: "routes/IM_Cozumel.json"
-  },
-  "im_danang": {
-    name: "IM Danang",
-    file: "routes/IM_Danang.json"
-  },
-  "im_florida": {
-    name: "IM Florida",
-    file: "routes/IM_Florida.json"
-  },
-  "im_hamburg": {
-    name: "IM Hamburg 2025",
-    file: "routes/IM_Hamburg.json"
-  },
-  "im_kalmar": {
-    name: "IM Kalmar",
-    file: "routes/IM_Kalmar.json"
-  },
-  "im_kona": {
-    name: "IM World Championship Kona",
-    file: "routes/IM_Kona.json"
-  },
-  "im_lake_placid": {
-    name: "IM Lake Placid",
-    file: "routes/IM_Lake_placid.json"
-  },
-  "im_maryland": {
-    name: "IM Maryland",
-    file: "routes/IM_Maryland.json"
-  },
-  "im_new_zealand": {
-    name: "IM New Zealand",
-    file: "routes/IM_New_Zealand.json"
-  },
-  "im_nice": {
-    name: "IM Nice",
-    file: "routes/IM_Nice.json"
-  },
-  "im_ottawa": {
-    name: "IM Ottawa",
-    file: "routes/IM_Ottawa.json"
-  },
-  "im_penghu": {
-    name: "IM Penghu",
-    file: "routes/IM_Penghu.json"
-  },
-  "im_philippines": {
-    name: "IM Philippines",
-    file: "routes/IM_Philippines.json"
-  },
-  "im_sables_d_olonne": {
-    name: "IM Les Sables d’Olonne",
-    file: "routes/IM_Sables_d_Olonne.json"
-  },
-  "im_san_juan": {
-    name: "IM San Juan",
-    file: "routes/IM_San_juan.json"
-  },
-  "im_tallinn": {
-    name: "IM Tallinn",
-    file: "routes/IM_Tallinn.json"
-  },
-  "im_texas": {
-    name: "IM Texas",
-    file: "routes/IM_Texas.json"
-  },
-  "im_valdivia": {
-    name: "IM Valdivia",
-    file: "routes/IM_Valdivia.json"
-  },
-  "im_vittoria_gasteiz": {
-    name: "IM Vittoria-Gasteiz",
-    file: "routes/IM_Vittoria_Gasteiz.json"
-  },
-  "im_wales": {
-    name: "IM Wales",
-    file: "routes/IM_Wales.json"
-  },
-  "im_frankfurt": {
-    name: "IM Frankfurt",
-    file: "routes/im_frankfurt.json"      // new cleaned Frankfurt JSON
-  },
-  "im_lanzarote": {
-    name: "IM Lanzarote",
-    file: "routes/IM_lanzarote.json"
-  },
-  "im_south_africa": {
-    name: "IM South Africa",
-    file: "routes/IM_south_africa.json"
-  },
-  "im_western_australia": {
-    name: "IM Western Australia",
-    file: "routes/im_western_australia.json"
-  },
-  "im_wisconsin": {
-    name: "IM Wisconsin",
-    file: "routes/im_wisconsin.json"
-  }
-};
+          /* IM full distance */
+          im_arizona: {
+            name: "IM Arizona",
+            file: "routes/IM_Arizona.json",
+          },
+          im_australia: {
+            name: "IM Australia",
+            file: "routes/IM_Australia.json",
+          },
+          im_barcelona: {
+            name: "IM Barcelona",
+            file: "routes/IM_Barcelona.json",
+          },
+          im_brazil: {
+            name: "IM Brazil",
+            file: "routes/IM_Brazil.json",
+          },
+          im_cairns: {
+            name: "IM Cairns",
+            file: "routes/IM_Cairns.json",
+          },
+          im_california: {
+            name: "IM California",
+            file: "routes/IM_California.json",
+          },
+          im_cascais: {
+            name: "IM Cascais",
+            file: "routes/IM_Cascais.json",
+          },
+          im_cozumel: {
+            name: "IM Cozumel",
+            file: "routes/IM_Cozumel.json",
+          },
+          im_danang: {
+            name: "IM Danang",
+            file: "routes/IM_Danang.json",
+          },
+          im_florida: {
+            name: "IM Florida",
+            file: "routes/IM_Florida.json",
+          },
+          im_hamburg: {
+            name: "IM Hamburg 2025",
+            file: "routes/IM_Hamburg.json",
+          },
+          im_kalmar: {
+            name: "IM Kalmar",
+            file: "routes/IM_Kalmar.json",
+          },
+          im_kona: {
+            name: "IM World Championship Kona",
+            file: "routes/IM_Kona.json",
+          },
+          im_lake_placid: {
+            name: "IM Lake Placid",
+            file: "routes/IM_Lake_placid.json",
+          },
+          im_maryland: {
+            name: "IM Maryland",
+            file: "routes/IM_Maryland.json",
+          },
+          im_new_zealand: {
+            name: "IM New Zealand",
+            file: "routes/IM_New_Zealand.json",
+          },
+          im_nice: {
+            name: "IM Nice",
+            file: "routes/IM_Nice.json",
+          },
+          im_ottawa: {
+            name: "IM Ottawa",
+            file: "routes/IM_Ottawa.json",
+          },
+          im_penghu: {
+            name: "IM Penghu",
+            file: "routes/IM_Penghu.json",
+          },
+          im_philippines: {
+            name: "IM Philippines",
+            file: "routes/IM_Philippines.json",
+          },
+          im_sables_d_olonne: {
+            name: "IM Les Sables d’Olonne",
+            file: "routes/IM_Sables_d_Olonne.json",
+          },
+          im_san_juan: {
+            name: "IM San Juan",
+            file: "routes/IM_San_juan.json",
+          },
+          im_tallinn: {
+            name: "IM Tallinn",
+            file: "routes/IM_Tallinn.json",
+          },
+          im_texas: {
+            name: "IM Texas",
+            file: "routes/IM_Texas.json",
+          },
+          im_valdivia: {
+            name: "IM Valdivia",
+            file: "routes/IM_Valdivia.json",
+          },
+          im_vittoria_gasteiz: {
+            name: "IM Vittoria-Gasteiz",
+            file: "routes/IM_Vittoria_Gasteiz.json",
+          },
+          im_wales: {
+            name: "IM Wales",
+            file: "routes/IM_Wales.json",
+          },
+          im_frankfurt: {
+            name: "IM Frankfurt",
+            file: "routes/im_frankfurt.json",
+          },
+          im_lanzarote: {
+            name: "IM Lanzarote",
+            file: "routes/IM_lanzarote.json",
+          },
+          im_south_africa: {
+            name: "IM South Africa",
+            file: "routes/IM_south_africa.json",
+          },
+          im_western_australia: {
+            name: "IM Western Australia",
+            file: "routes/im_western_australia.json",
+          },
+          im_wisconsin: {
+            name: "IM Wisconsin",
+            file: "routes/im_wisconsin.json",
+          },
+        };
 
-        // --- Normalisation helpers ----------------------------------------------------
+        /* -------- input helpers & physics ---------- */
 
-        function computeDistancesFromLatLngs(latlngs) {
-          if (!Array.isArray(latlngs) || latlngs.length < 2) return null;
-          const R = 6371000; // m
-          const toRad = (x) => (x * Math.PI) / 180;
-          const dist = [0];
-          let acc = 0;
-          for (let i = 1; i < latlngs.length; i++) {
-            const [lat1, lon1] = latlngs[i - 1];
-            const [lat2, lon2] = latlngs[i];
-            const phi1 = toRad(lat1);
-            const phi2 = toRad(lat2);
-            const dphi = toRad(lat2 - lat1);
-            const dlambda = toRad(lon2 - lon1);
-            const a =
-              Math.sin(dphi / 2) * Math.sin(dphi / 2) +
-              Math.cos(phi1) *
-                Math.cos(phi2) *
-                Math.sin(dlambda / 2) *
-                Math.sin(dlambda / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const step = R * c; // m
-            acc += step;
-            dist.push(acc / 1000); // km
-          }
-          return dist;
-        }
-
-        function normalizeRouteProfile(raw, displayName) {
-          const out = Object.assign({}, raw);
-          const elev = Array.isArray(raw.elevations)
-            ? raw.elevations.slice()
-            : [];
-          let dist = Array.isArray(raw.distances) ? raw.distances.slice() : null;
-
-          // Rebuild distances if missing or length mismatch
-          if (!dist || dist.length !== elev.length) {
-            if (
-              typeof raw.distance_km === "number" &&
-              raw.distance_km > 0 &&
-              elev.length > 1
-            ) {
-              dist = [];
-              const totalKm = raw.distance_km;
-              const n = elev.length;
-              for (let i = 0; i < n; i++) {
-                dist.push((totalKm * i) / (n - 1));
-              }
-            } else if (
-              Array.isArray(raw.latlngs) &&
-              raw.latlngs.length === elev.length
-            ) {
-              dist = computeDistancesFromLatLngs(raw.latlngs);
-            }
-          }
-
-          // Last fallback: fake linear distances so nothing crashes
-          if (!Array.isArray(dist) || dist.length < 2) {
-            dist = [];
-            for (let i = 0; i < elev.length; i++) {
-              dist.push(i * 0.1); // 100 m chunks, arbitrary
-            }
-          }
-
-          let last = dist[dist.length - 1];
-
-          // Case 1: distances in meters (e.g. up to 180000)
-          if (last > 500) {
-            dist = dist.map((d) => d / 1000);
-            last = dist[dist.length - 1];
-          }
-
-          const jsonDistKm =
-            typeof raw.distance_km === "number" && raw.distance_km > 0
-              ? raw.distance_km
-              : null;
-
-          // Case 2: 0–1 scaling / inconsistent distance vs distance_km
-          if (jsonDistKm && last > 0) {
-            if (last < jsonDistKm * 0.8 || last > jsonDistKm * 1.2) {
-              const factor = jsonDistKm / last;
-              dist = dist.map((d) => d * factor);
-              last = dist[dist.length - 1];
-            }
-          }
-
-          // Recompute climb and elevation min/max from elevation array
-          let elevMin = elev.length ? elev[0] : 0;
-          let elevMax = elev.length ? elev[0] : 0;
-          let totalClimb = 0;
-          for (let i = 1; i < elev.length; i++) {
-            const e = elev[i];
-            if (e < elevMin) elevMin = e;
-            if (e > elevMax) elevMax = e;
-            const diff = e - elev[i - 1];
-            if (diff > 0) totalClimb += diff;
-          }
-
-          out.distances = dist;
-          out.distance_km = jsonDistKm || last || 0;
-          out.total_climb_m = Math.round(totalClimb);
-          out.elev_min =
-            typeof raw.elev_min === "number" ? raw.elev_min : elevMin;
-          out.elev_max =
-            typeof raw.elev_max === "number" ? raw.elev_max : elevMax;
-          out.name = raw.name || displayName || "";
-
-          return out;
-        }
-
-        // ------------------------------------------------------------------
         function changeTyreCondition() {
           document.getElementById("crr_rolling").value =
             document.getElementById("tyreCondition").value;
@@ -1497,7 +1381,8 @@
         }
 
         function pressureAtAltitude(altMeters, pOverride_hPa) {
-          if (pOverride_hPa && pOverride_hPa > 0) return pOverride_hPa * 100.0;
+          if (pOverride_hPa && pOverride_hPa > 0)
+            return pOverride_hPa * 100.0;
           const P0 = 101325.0,
             T0 = 288.15,
             g = 9.80665,
@@ -1514,8 +1399,8 @@
           const T = tempC + 273.15;
           const es = saturationVaporPressure_Pa(tempC);
           const e =
-            es *
-            (Math.max(0, Math.min(100, RHpercent)) / 100); /* no 0.99 cap */
+            Math.max(0, Math.min(pressurePa * 0.99, es)) *
+            (Math.max(0, Math.min(100, RHpercent)) / 100);
           const pd = Math.max(1, pressurePa - e);
           const Rd = 287.05,
             Rv = 461.495;
@@ -1581,7 +1466,9 @@
         }
         function syncAdvancedFromFtp() {
           const baseVal =
-            parseFloat(document.getElementById("known_ftp").value || "0") || 0;
+            parseFloat(
+              document.getElementById("known_ftp").value || "0"
+            ) || 0;
           const advField = document.getElementById("advanced_ftp");
           if (advField && baseVal > 0) {
             advField.value = baseVal;
@@ -1603,10 +1490,14 @@
           const cosTheta = 1 / Math.sqrt(1 + grade * grade);
           const vAir = v + wind;
           const vAirAbs = Math.abs(vAir);
-          const powerAero = 0.5 * rho * cda * vAirAbs * vAirAbs * v;
+          const powerAero =
+            0.5 * rho * cda * vAirAbs * vAirAbs * v;
           const powerRoll = g * totalWeight * crr * cosTheta * v;
           const powerClimb = g * totalWeight * sinTheta * v;
-          const wheelPower = Math.max(0, powerAero + powerRoll + powerClimb);
+          const wheelPower = Math.max(
+            0,
+            powerAero + powerRoll + powerClimb
+          );
           return wheelPower / Math.max(0.01, driveEff);
         }
 
@@ -1644,8 +1535,10 @@
         function rebuildAdvancedPacing() {
           const container = document.getElementById("advancedPacing");
           const mode = document.getElementById("calcMode").value;
-          const strategyRow = document.getElementById("finishTimeStrategyRow");
-          const strategyVal = document.getElementById("finishTimeStrategy");
+          const strategyRow =
+            document.getElementById("finishTimeStrategyRow");
+          const strategyVal =
+            document.getElementById("finishTimeStrategy");
 
           if (!container) return;
 
@@ -1690,7 +1583,9 @@
               document.getElementById("temperature-c").value || "0"
             ) || 0;
           const alt =
-            parseFloat(document.getElementById("altitude").value || "0") || 0;
+            parseFloat(
+              document.getElementById("altitude").value || "0"
+            ) || 0;
           const RH =
             parseFloat(
               document.getElementById("relHumidity").value || "0"
@@ -1719,8 +1614,8 @@
 
           const cda =
             parseFloat(
-              document.getElementById("cdaAeroDynamicResistance").value ||
-                "0.18"
+              document.getElementById("cdaAeroDynamicResistance")
+                .value || "0.18"
             ) || 0.18;
           const crr =
             parseFloat(
@@ -1728,7 +1623,8 @@
             ) || 0.0035;
           const driveEff =
             (parseFloat(
-              document.getElementById("driveTrainEfficiency").value || "98"
+              document.getElementById("driveTrainEfficiency").value ||
+                "98"
             ) || 98) / 100;
 
           const ftpAdv =
@@ -1770,11 +1666,13 @@
           let maxDesc_mps = Infinity;
           if (maxDesc > 0) {
             maxDesc_mps =
-              unit === "metric" ? maxDesc / 3.6 : maxDesc * 0.44704;
+              unit === "metric"
+                ? maxDesc / 3.6
+                : maxDesc * 0.44704;
           }
 
           const targetSegLenKm = totalDistKm >= 120 ? 5 : 3;
-          const steepGrade = 0.08; // ~8% grade
+          const steepGrade = 0.08;
           const minSteepLenKm = 0.7;
           const segments = [];
           let segStartIdx = 0;
@@ -1787,8 +1685,10 @@
             const stepElev = elev[i] - elev[i - 1];
             const stepGrade = stepM > 0 ? stepElev / stepM : 0;
             const isSteep =
-              Math.abs(stepGrade) >= steepGrade && stepKm >= minSteepLenKm;
-            const longEnough = dKmFromSegStart >= targetSegLenKm && i > segStartIdx + 1;
+              Math.abs(stepGrade) >= steepGrade &&
+              stepKm >= minSteepLenKm;
+            const longEnough =
+              dKmFromSegStart >= targetSegLenKm && i > segStartIdx + 1;
 
             if (isSteep) {
               if (i - 1 > segStartIdx) {
@@ -1873,11 +1773,17 @@
 
             const speedKmh = v * 3.6;
             const speedDisplay =
-              unit === "metric" ? speedKmh : speedKmh / 1.60934;
+              unit === "metric"
+                ? speedKmh
+                : speedKmh / 1.60934;
             const lenDisplay =
-              unit === "metric" ? lenKm : lenKm / 1.60934;
+              unit === "metric"
+                ? lenKm
+                : lenKm / 1.60934;
             const startDisplay =
-              unit === "metric" ? dStart : dStart / 1.60934;
+              unit === "metric"
+                ? dStart
+                : dStart / 1.60934;
             const endDisplay =
               unit === "metric" ? dEnd : dEnd / 1.60934;
 
@@ -1927,7 +1833,7 @@
             ")</th>" +
             "<th>Len (" +
             unitDistLabel +
-            ")</th><th>Type</th><th>Grade (%)</th>" +
+            ')</th><th>Type</th><th>Grade (%)</th>' +
             "<th>Power (W)</th><th>Speed (" +
             unitSpeedLabel +
             ")</th><th>Time</th></tr></thead><tbody>";
@@ -1990,7 +1896,7 @@
           if (strategyVal) strategyVal.textContent = fmtTotal(totalTimeSec);
         }
 
-        // --- Technical challenges: climbs, descents, sharp turns ---
+        /* --- Technical challenges --- */
 
         function bearingDeg(lat1, lon1, lat2, lon2) {
           const toRad = (x) => (x * Math.PI) / 180;
@@ -2023,9 +1929,9 @@
             return;
           }
 
-          const dist = profile.distances; // km
-          const elev = profile.elevations; // m
-          const latlngs = profile.latlngs; // [lat,lon]
+          const dist = profile.distances;
+          const elev = profile.elevations;
+          const latlngs = profile.latlngs;
           const n = Math.min(
             dist.length,
             elev.length,
@@ -2041,12 +1947,12 @@
           const distFactor = unit === "metric" ? 1 : 1 / 1.60934;
           const distLabel = unit === "metric" ? "km" : "mi";
 
-          const gradeThreshold = 0.03; // 3%
+          const gradeThreshold = 0.03;
 
           const climbSegments = [];
           const descSegments = [];
 
-          let currentType = null; // 'climb' | 'descent' | null
+          let currentType = null;
           let segStartIdx = 0;
 
           for (let i = 1; i < n; i++) {
@@ -2054,7 +1960,7 @@
             const stepM = stepKm * 1000;
             if (stepM <= 0) continue;
             const dElev = elev[i] - elev[i - 1];
-            const g = dElev / stepM; // slope
+            const g = dElev / stepM;
 
             let type = null;
             if (g >= gradeThreshold) type = "climb";
@@ -2080,8 +1986,7 @@
                   lenKm,
                   avgGrade,
                 };
-                if (currentType === "climb")
-                  climbSegments.push(segObj);
+                if (currentType === "climb") climbSegments.push(segObj);
                 else if (currentType === "descent")
                   descSegments.push(segObj);
               }
@@ -2100,7 +2005,8 @@
             const dEndKm = dist[endIdx];
             const lenKm = Math.max(0, dEndKm - dStartKm);
             const dElevSeg = elev[endIdx] - elev[startIdx];
-            const avgGrade = lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
+            const avgGrade =
+              lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
             const segObj = {
               startIdx,
               endIdx,
@@ -2110,12 +2016,11 @@
               avgGrade,
             };
             if (currentType === "climb") climbSegments.push(segObj);
-            else if (currentType === "descent")
-              descSegments.push(segObj);
+            else if (currentType === "descent") descSegments.push(segObj);
           }
 
           const sharpTurns = [];
-          const angleThresh = 80; // degrees
+          const angleThresh = 80;
 
           for (let i = 1; i < n - 1; i++) {
             const [lat0, lon0] = latlngs[i - 1];
@@ -2156,7 +2061,7 @@
               distLabel +
               ")</th><th>Distance (" +
               distLabel +
-              ')</th><th>Avg grade (%)</th>' +
+              ")</th><th>Avg grade (%)</th>" +
               "</tr></thead><tbody>";
             climbSegments.forEach((s, idx) => {
               const from = s.startKm * distFactor;
@@ -2195,7 +2100,7 @@
               distLabel +
               ")</th><th>Distance (" +
               distLabel +
-              ')</th><th>Avg grade (%)</th>' +
+              ")</th><th>Avg grade (%)</th>" +
               "</tr></thead><tbody>";
             descSegments.forEach((s, idx) => {
               const from = s.startKm * distFactor;
@@ -2253,6 +2158,8 @@
           container.innerHTML = html;
         }
 
+        /* ------------- main physics result --------------- */
+
         function calculateResult() {
           const rw =
             parseFloat(
@@ -2271,7 +2178,7 @@
           const distKm =
             parseFloat(
               document.getElementById("distance-km").value || 0
-            ) || 1;
+            ) || 0;
           const climbM =
             parseFloat(
               document.getElementById("total-climb-m").value || 0
@@ -2309,31 +2216,37 @@
 
           const cda =
             parseFloat(
-              document.getElementById("cdaAeroDynamicResistance").value ||
-                0
+              document.getElementById("cdaAeroDynamicResistance")
+                .value
             ) || 0.18;
           const crr =
             parseFloat(
-              document.getElementById("crr_rolling").value || 0
+              document.getElementById("crr_rolling").value
             ) || 0.0035;
           const g = 9.80665;
           const driveEff =
             (parseFloat(
-              document.getElementById("driveTrainEfficiency").value ||
-                98
+              document.getElementById("driveTrainEfficiency").value
             ) || 98) / 100;
 
-          const grade = distKm > 0 ? climbM / (distKm * 1000) : 0;
+          const grade =
+            distKm > 0 ? climbM / (distKm * 1000) : 0;
           const sinTheta = grade / Math.sqrt(1 + grade * grade);
           const cosTheta = 1 / Math.sqrt(1 + grade * grade);
 
           function powerForSpeed(v) {
             const vAir = v + wind;
             const vAirAbs = Math.abs(vAir);
-            const powerAero = 0.5 * rho * cda * vAirAbs * vAirAbs * v;
-            const powerRoll = g * totalWeight * crr * cosTheta * v;
-            const powerClimb = g * totalWeight * sinTheta * v;
-            const wheelPower = Math.max(0, powerAero + powerRoll + powerClimb);
+            const powerAero =
+              0.5 * rho * cda * vAirAbs * vAirAbs * v;
+            const powerRoll =
+              g * totalWeight * crr * cosTheta * v;
+            const powerClimb =
+              g * totalWeight * sinTheta * v;
+            const wheelPower = Math.max(
+              0,
+              powerAero + powerRoll + powerClimb
+            );
             return wheelPower / Math.max(0.01, driveEff);
           }
 
@@ -2368,8 +2281,12 @@
 
               const totalSeconds = timeH * 3600;
               let hh = Math.floor(totalSeconds / 3600);
-              let mm = Math.floor((totalSeconds - hh * 3600) / 60);
-              let ss = Math.round(totalSeconds - hh * 3600 - mm * 60);
+              let mm = Math.floor(
+                (totalSeconds - hh * 3600) / 60
+              );
+              let ss = Math.round(
+                totalSeconds - hh * 3600 - mm * 60
+              );
               if (ss === 60) {
                 ss = 0;
                 mm += 1;
@@ -2382,9 +2299,12 @@
               const hhEl = document.getElementById("hh");
               const mmEl = document.getElementById("mm");
               const ssEl = document.getElementById("ss");
-              if (hhEl) hhEl.value = String(hh).padStart(2, "0");
-              if (mmEl) mmEl.value = String(mm).padStart(2, "0");
-              if (ssEl) ssEl.value = String(ss).padStart(2, "0");
+              if (hhEl)
+                hhEl.value = String(hh).padStart(2, "0");
+              if (mmEl)
+                mmEl.value = String(mm).padStart(2, "0");
+              if (ssEl)
+                ssEl.value = String(ss).padStart(2, "0");
             } else {
               const hh =
                 parseFloat(
@@ -2398,7 +2318,7 @@
                 parseFloat(
                   document.getElementById("ss").value || 0
                 ) || 0;
-              timeH = hh + mm / 60 + ss / 3600 || 1 / 3600;
+              timeH = (hh + mm / 60 + ss / 3600) || 1 / 3600;
               const speedKmH = distKm / timeH;
               v = (speedKmH * 1000) / 3600;
               avgW = powerForSpeed(v);
@@ -2416,7 +2336,7 @@
               parseFloat(
                 document.getElementById("ss").value || 0
               ) || 0;
-            timeH = hh + mm / 60 + ss / 3600 || 1 / 3600;
+            timeH = (hh + mm / 60 + ss / 3600) || 1 / 3600;
             const speedKmH = distKm / timeH;
             v = (speedKmH * 1000) / 3600;
             avgW = powerForSpeed(v);
@@ -2454,7 +2374,7 @@
                 parseFloat(
                   document.getElementById("ss").value || 0
                 ) || 0;
-              timeH = hh + mm / 60 + ss / 3600 || 1 / 3600;
+              timeH = (hh + mm / 60 + ss / 3600) || 1 / 3600;
               const speedKmH = distKm / timeH;
               v = (speedKmH * 1000) / 3600;
               avgW = powerForSpeed(v);
@@ -2470,7 +2390,7 @@
               parseFloat(
                 document.getElementById("known_ftp").value || 1
               ) || 1
-            ) || 1;
+            );
           const IF = avgW / ftp;
           const TSS = timeH * IF * IF * 100;
 
@@ -2481,7 +2401,7 @@
               parseFloat(
                 document.getElementById("fitnessValue").value || 1
               ) || 1
-            ) || 1;
+            );
           const ratio = TSS / fitness;
           if (ratio > 2.01) desc = "Extreme workout";
           else if (ratio > 1.5) desc = "Hard workout";
@@ -2512,7 +2432,8 @@
           rebuildAdvancedPacing();
         }
 
-        // Map + chart
+        /* ---------------- Map + Chart ---------------- */
+
         const map = L.map("map").setView([0, 0], 2);
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
@@ -2521,9 +2442,8 @@
 
         let polyline = null;
 
-        const elevCtx = document
-          .getElementById("elevChart")
-          .getContext("2d");
+        const elevCtx =
+          document.getElementById("elevChart").getContext("2d");
         const elevChart = new Chart(elevCtx, {
           type: "line",
           data: {
@@ -2608,8 +2528,7 @@
           let yminRaw;
           let ymaxRaw;
           if (
-            typeof window.currentRouteProfile.elev_min ===
-              "number" &&
+            typeof window.currentRouteProfile.elev_min === "number" &&
             typeof window.currentRouteProfile.elev_max === "number"
           ) {
             const pad = 10;
@@ -2645,9 +2564,7 @@
           elevChart.options.scales.y.min = yminDisplay;
           elevChart.options.scales.y.max = ymaxDisplay;
 
-          elevChart.options.plugins.tooltip.callbacks.title = (
-            items
-          ) => {
+          elevChart.options.plugins.tooltip.callbacks.title = (items) => {
             if (!items.length) return "";
             const label = items[0].label;
             const val =
@@ -2657,9 +2574,7 @@
             return (isImperial ? "mi " : "km ") + val.toFixed(2);
           };
 
-          elevChart.options.plugins.tooltip.callbacks.label = (
-            item
-          ) => {
+          elevChart.options.plugins.tooltip.callbacks.label = (item) => {
             const y = item.parsed.y || 0;
             return (
               "Elevation: " +
@@ -2686,6 +2601,115 @@
           }
         });
 
+        /* ---- Normalisation helpers for route JSON ---- */
+
+        function haversineMeters(lat1, lon1, lat2, lon2) {
+          const R = 6371000;
+          const toRad = Math.PI / 180;
+          const φ1 = lat1 * toRad;
+          const φ2 = lat2 * toRad;
+          const dφ = (lat2 - lat1) * toRad;
+          const dλ = (lon2 - lon1) * toRad;
+
+          const a =
+            Math.sin(dφ / 2) * Math.sin(dφ / 2) +
+            Math.cos(φ1) *
+              Math.cos(φ2) *
+              Math.sin(dλ / 2) *
+              Math.sin(dλ / 2);
+
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return R * c;
+        }
+
+        function buildNormalizedRoute(raw) {
+          const out = Object.assign({}, raw);
+
+          const latlngsRaw = Array.isArray(raw.latlngs)
+            ? raw.latlngs
+            : [];
+          const elevRaw = Array.isArray(raw.elevations)
+            ? raw.elevations
+            : [];
+
+          const n = Math.min(latlngsRaw.length, elevRaw.length);
+          if (n < 2) {
+            out.distances = Array.isArray(raw.distances)
+              ? raw.distances
+              : [];
+            out.elevations = elevRaw;
+            out.latlngs = latlngsRaw;
+            out.total_climb_m =
+              typeof raw.total_climb_m === "number"
+                ? raw.total_climb_m
+                : 0;
+            out.distance_km =
+              typeof raw.distance_km === "number"
+                ? raw.distance_km
+                : 0;
+            out.elev_min =
+              typeof raw.elev_min === "number" ? raw.elev_min : 0;
+            out.elev_max =
+              typeof raw.elev_max === "number" ? raw.elev_max : 0;
+            return out;
+          }
+
+          const latlngs = [];
+          const elevations = [];
+          for (let i = 0; i < n; i++) {
+            const pt = latlngsRaw[i];
+            const lat = Number(pt[0]);
+            const lon = Number(pt[1]);
+            latlngs.push([lat, lon]);
+            elevations.push(Number(elevRaw[i]));
+          }
+
+          const distances = [];
+          let cumKm = 0;
+          distances.push(0);
+          for (let i = 1; i < n; i++) {
+            const [lat1, lon1] = latlngs[i - 1];
+            const [lat2, lon2] = latlngs[i];
+            const dM = haversineMeters(lat1, lon1, lat2, lon2);
+            cumKm += dM / 1000;
+            distances.push(Number(cumKm.toFixed(3)));
+          }
+
+          let totalClimb = 0;
+          let minE = elevations[0];
+          let maxE = elevations[0];
+          for (let i = 1; i < n; i++) {
+            const de = elevations[i] - elevations[i - 1];
+            if (de > 0) totalClimb += de;
+            if (elevations[i] < minE) minE = elevations[i];
+            if (elevations[i] > maxE) maxE = elevations[i];
+          }
+
+          const computedDistKm =
+            distances[distances.length - 1] || 0;
+          const distKmFinal =
+            typeof raw.distance_km === "number" &&
+            raw.distance_km > 0.1
+              ? raw.distance_km
+              : computedDistKm;
+
+          out.distances = distances;
+          out.elevations = elevations;
+          out.latlngs = latlngs;
+          out.distance_km = distKmFinal;
+          out.total_climb_m =
+            typeof raw.total_climb_m === "number" &&
+            raw.total_climb_m > 0
+              ? raw.total_climb_m
+              : Math.round(totalClimb);
+          out.elev_min =
+            typeof raw.elev_min === "number" ? raw.elev_min : minE;
+          out.elev_max =
+            typeof raw.elev_max === "number" ? raw.elev_max : maxE;
+
+          return out;
+        }
+
         async function loadRoute(key) {
           if (!key) return;
           const meta = ROUTE_INDEX[key];
@@ -2697,74 +2721,110 @@
               throw new Error("HTTP " + res.status);
             }
             const raw = await res.json();
-            const profile = normalizeRouteProfile(raw, meta.name || key);
-            window.currentRouteProfile = profile;
+            const r = buildNormalizedRoute(raw);
+            window.currentRouteProfile = r;
 
             if (polyline) {
               map.removeLayer(polyline);
+              polyline = null;
             }
-            if (Array.isArray(profile.latlngs)) {
-              polyline = L.polyline(profile.latlngs, {
+            if (Array.isArray(r.latlngs) && r.latlngs.length > 1) {
+              polyline = L.polyline(r.latlngs, {
                 weight: 4,
                 color: "#ef4444",
               }).addTo(map);
               map.fitBounds(polyline.getBounds(), {
                 padding: [20, 20],
               });
+            } else {
+              map.setView([0, 0], 2);
             }
 
             const currentUnits =
               document.getElementById("unit").value || "metric";
             updateChartUnits(currentUnits);
 
-            if (typeof profile.distance_km === "number") {
-              document.getElementById("distance-km").value =
-                profile.distance_km.toFixed(1);
-              const mi = profile.distance_km / 1.60934;
-              const distMiEl = document.getElementById("distance-mi");
+            if (
+              typeof r.distance_km === "number" &&
+              r.distance_km > 0
+            ) {
+              const km = r.distance_km;
+              const mi = km / 1.60934;
+              const distKmEl =
+                document.getElementById("distance-km");
+              const distMiEl =
+                document.getElementById("distance-mi");
+              if (distKmEl) distKmEl.value = km.toFixed(1);
               if (distMiEl) distMiEl.value = mi.toFixed(2);
             }
-            if (typeof profile.total_climb_m === "number") {
-              document.getElementById("total-climb-m").value =
-                profile.total_climb_m.toFixed(0);
-              const ft = profile.total_climb_m * 3.28084;
-              const climbFtEl = document.getElementById(
-                "total-climb-ft"
-              );
+
+            if (
+              typeof r.total_climb_m === "number" &&
+              r.total_climb_m > 0
+            ) {
+              const m = r.total_climb_m;
+              const ft = m * 3.28084;
+              const climbMEl =
+                document.getElementById("total-climb-m");
+              const climbFtEl =
+                document.getElementById("total-climb-ft");
+              if (climbMEl) climbMEl.value = m.toFixed(0);
               if (climbFtEl) climbFtEl.value = ft.toFixed(0);
             }
+
             if (
-              Array.isArray(profile.elevations) &&
-              profile.elevations.length > 0
+              Array.isArray(r.elevations) &&
+              r.elevations.length > 0
             ) {
-              const startAlt = profile.elevations[0];
-              document.getElementById("altitude").value =
-                Math.round(startAlt);
+              const startAlt = r.elevations[0];
+              const altEl = document.getElementById("altitude");
+              if (altEl) altEl.value = Math.round(startAlt);
             }
 
-            const distTot = profile.distance_km || 0;
-            const climbTot = profile.total_climb_m || 0;
+            const distTot =
+              typeof r.distance_km === "number" &&
+              r.distance_km > 0
+                ? r.distance_km
+                : Array.isArray(r.distances) &&
+                  r.distances.length
+                ? r.distances[r.distances.length - 1]
+                : 0;
+
+            const climbTot =
+              typeof r.total_climb_m === "number"
+                ? r.total_climb_m
+                : 0;
             const avgGrade =
-              distTot > 0 ? climbTot / (distTot * 10) : 0; // % ≈ climb_m / (dist_km * 1000) * 100
+              distTot > 0 ? climbTot / (distTot * 10) : 0;
+
             const elevMin =
-              typeof profile.elev_min === "number"
-                ? profile.elev_min
-                : "—";
+              typeof r.elev_min === "number"
+                ? r.elev_min
+                : Array.isArray(r.elevations) &&
+                  r.elevations.length
+                ? Math.min.apply(null, r.elevations)
+                : 0;
+
             const elevMax =
-              typeof profile.elev_max === "number"
-                ? profile.elev_max
-                : "—";
-            const routeName =
-              profile.name || meta.name || key;
+              typeof r.elev_max === "number"
+                ? r.elev_max
+                : Array.isArray(r.elevations) &&
+                  r.elevations.length
+                ? Math.max.apply(null, r.elevations)
+                : 0;
+
+            const name = r.name || meta.name || key;
 
             routeMetaEl.textContent =
-              `${routeName} – ${distTot.toFixed(
+              `${name} – ${distTot.toFixed(
                 1
               )} km, climb ≈ ${climbTot.toFixed(
                 0
               )} m (avg grade ≈ ${avgGrade.toFixed(
                 1
-              )}%), elevation ${elevMin}–${elevMax} m`;
+              )}%), elevation ${elevMin.toFixed(
+                0
+              )}–${elevMax.toFixed(0)} m`;
 
             localStorage.setItem("bikesim_last_route", key);
 
@@ -2772,8 +2832,10 @@
             rebuildTechnicalChallenges();
           } catch (err) {
             console.error("Failed to load route", key, err);
-            routeMetaEl.textContent = "Error loading route data.";
-            const tech = document.getElementById("techChallenges");
+            routeMetaEl.textContent =
+              "Error loading route data.";
+            const tech =
+              document.getElementById("techChallenges");
             if (tech) {
               tech.innerHTML =
                 '<p style="margin:0;font-size:13px;color:#92400e;">Error loading route data, cannot compute technical challenges.</p>';
@@ -2794,7 +2856,8 @@
             "No route selected. You can still enter distance, climb, and altitude manually.";
           window.currentRouteProfile = null;
           rebuildAdvancedPacing();
-          const tech = document.getElementById("techChallenges");
+          const tech =
+            document.getElementById("techChallenges");
           if (tech) {
             tech.innerHTML =
               '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
@@ -2859,7 +2922,8 @@
         updateCalcModeUI();
         calculateResult();
         if (typeof updateChartUnits === "function") {
-          const u0 = document.getElementById("unit").value || "metric";
+          const u0 =
+            document.getElementById("unit").value || "metric";
           updateChartUnits(u0);
         }
         if (typeof rebuildTechnicalChallenges === "function") {
@@ -2872,9 +2936,10 @@
           document.getElementById("courseAnalysis");
         if (courseToggleBtn && courseAnalysisEl) {
           courseToggleBtn.addEventListener("click", () => {
-            const isHidden = courseAnalysisEl.classList.toggle(
-              "courseAnalysis--hidden"
-            );
+            const isHidden =
+              courseAnalysisEl.classList.toggle(
+                "courseAnalysis--hidden"
+              );
             courseToggleBtn.textContent = isHidden
               ? "Show course analysis"
               : "Hide course analysis";
@@ -2889,7 +2954,8 @@
         }
 
         rebuildRouteOptions("");
-        const savedRoute = localStorage.getItem("bikesim_last_route");
+        const savedRoute =
+          localStorage.getItem("bikesim_last_route");
         if (savedRoute && ROUTE_INDEX[savedRoute]) {
           routeSelectEl.value = savedRoute;
           loadRoute(savedRoute);
