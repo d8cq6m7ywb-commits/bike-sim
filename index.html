@@ -302,29 +302,6 @@
         <label for="routeSelect">Route:</label>
  <select id="routeSelect">
   <option value="">— No route selected —</option>
-  <option value="im703_la_quinta">IM703 La Quinta</option>
-  <option value="im703_vichy">IM703 Vichy</option>
-  <option value="im703_texas_galveston">IM703 Texas Galveston</option>
-  <option value="im703_florida">IM703 Florida</option>
-  <option value="im703_north_carolina">IM703 North Carolina</option>
-  <option value="im703_northern_california">IM703 Northern California</option>
-  <option value="im703_sables_d_olonne">IM703 Les Sables d’Olonne</option>
-  <option value="im703_hawaii">IM703 Hawaii</option>
-  <option value="im_california">IM California</option>
-  <option value="im_arizona">IM Arizona</option>
-  <option value="im_florida">IM Florida</option>
-  <option value="im_sables_d_olonne">IM Les Sables d’Olonne</option>
-  <option value="im_tallinn">IM Tallinn</option>
-  <option value="im_nice">IM Nice</option>
-  <option value="kona_2024">IM WC Kona 2024</option>
-  <option value="hamburg_2025">IRONMAN Hamburg 2025</option>
-  <option value="challenge_roth">Challenge Roth</option>
-  <option value="challenge_israman">Challenge Israman</option>
-  <option value="challenge703_israman">Challenge703 Israman</option>
-  <option value="challenge703_rio">Challenge703 Rio de Janeiro</option>
-  <option value="challenge703_oman">Challenge703 Oman</option>
-  <option value="challenge703_sir_bani_yas">Challenge703 Sir Bani Yas</option>
-<option value="im703_tallinn">IM703 Tallinn</option>
 </select>
         <button id="resetRouteBtn" type="button">Reset</button>
         <div class="route__meta" id="routeMeta">No route selected. You can still enter distance, climb, and altitude manually.</div>
@@ -704,7 +681,7 @@
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script>
         // Route index for lazy-loaded JSON files
-        const ROUTE_INDEX = {
+      const ROUTE_INDEX = {
   "im_california": {
     name: "IM California",
     file: "routes/IM_California.json"
@@ -715,35 +692,35 @@
   },
   "im703_la_quinta": {
     name: "IM703 La Quinta",
-    file: "routes/IM703_La_Quinta.json"
+    file: "routes/IM70.3_La_Quinta.json"
   },
   "im703_vichy": {
     name: "IM703 Vichy",
-    file: "routes/IM703_Vichy.json"
+    file: "routes/IM70.3_Vichy.json"
   },
   "im703_texas_galveston": {
     name: "IM703 Texas Galveston",
-    file: "routes/IM703_Texas_Galveston.json"
+    file: "routes/IM70.3_Texas_Galveston.json"
   },
   "im703_florida": {
     name: "IM703 Florida",
-    file: "routes/IM703_Florida.json"
+    file: "routes/IM70.3_Florida.json"
   },
   "im703_north_carolina": {
     name: "IM703 North Carolina",
-    file: "routes/IM703_North_Carolina.json"
+    file: "routes/IM70.3_North_Carolina.json"
   },
   "im703_northern_california": {
     name: "IM703 Northern California",
-    file: "routes/IM703_Northern_California.json"
+    file: "routes/IM70.3_Northern_California.json"
   },
   "im703_sables_d_olonne": {
     name: "IM703 Les Sables d’Olonne",
-    file: "routes/IM703_Sables_d_Olonne.json"
+    file: "routes/IM70.3_Sables_d_Olonne.json"
   },
   "im703_hawaii": {
     name: "IM703 Hawaii",
-    file: "routes/IM703_Hawaii.json"
+    file: "routes/IM70.3_Hawaii.json"   // make sure the file is really named exactly this
   },
   "im_frankfurt": {
     name: "IM Frankfurt",
@@ -771,12 +748,13 @@
   },
   "kona_2024": {
     name: "IM World Championship Kona 2024",
-    file: "routes/IRONMAN_Kona_Map_Bike_24.json"
+    file: "routes/IM_Kona.json"
   },
   "hamburg_2025": {
     name: "IRONMAN Hamburg 2025",
-    file: "routes/IRONMAN_HAMBURG_2025.json"
+    file: "routes/IM_Hamburg.json"
   },
+
   "challenge_roth": {
     name: "Challenge Roth",
     file: "routes/Challenge_Roth.json"
@@ -787,26 +765,25 @@
   },
   "challenge703_israman": {
     name: "Challenge703 Israman",
-    file: "routes/Challenge703_Israman.json"
+    file: "routes/Challenge70.3_Israman.json"
   },
   "challenge703_rio": {
     name: "Challenge703 Rio de Janeiro",
-    file: "routes/Challenge703_Rio_de_Janeiro.json"
+    file: "routes/Challenge70.3_Rio_de_Janeiro.json"
   },
   "challenge703_oman": {
     name: "Challenge703 Oman",
-    file: "routes/Challenge703_Oman.json"
+    file: "routes/Challenge70.3_Oman.json"
   },
   "challenge703_sir_bani_yas": {
     name: "Challenge703 Sir Bani Yas",
-    file: "routes/Challenge703_Sir_Bani_Yas.json"
+    file: "routes/Challenge70.3_Sir_Bani_Yas.json"
   },
 
   "im703_tallinn": {
     name: "IM703 Tallinn",
-    file: "routes/IM703_Tallinn.json"
+    file: "routes/IM70.3_Tallinn.json"
   }
-  // add any others the same way
 };
         function changeTyreCondition(){
           document.getElementById("crr_rolling").value = document.getElementById("tyreCondition").value;
@@ -1745,44 +1722,44 @@
           }
         }
 
-        function rebuildRouteOptions(filterText) {
-          const txt = (filterText || '').toLowerCase();
+      function rebuildRouteOptions(filterText) {
+  const txt = (filterText || '').toLowerCase();
 
-          while (routeSelectEl.options.length > 0) {
-            routeSelectEl.remove(0);
-          }
-          const defaultOpt = document.createElement('option');
-          defaultOpt.value = '';
-          defaultOpt.textContent = '— No route selected —';
-          routeSelectEl.appendChild(defaultOpt);
+  // Clear existing options
+  while (routeSelectEl.options.length > 0) {
+    routeSelectEl.remove(0);
+  }
 
-          Object.entries(ROUTE_INDEX).forEach(([key, meta]) => {
-            const name = meta.name || key;
-            const haystack = (name + ' ' + key).toLowerCase();
-            if (!txt || haystack.includes(txt)) {
-              const opt = document.createElement('option');
-              opt.value = key;
-              opt.textContent = name;
-              routeSelectEl.appendChild(opt);
-            }
-          });
+  // Default “no route” option
+  const defaultOpt = document.createElement('option');
+  defaultOpt.value = '';
+  defaultOpt.textContent = '— No route selected —';
+  routeSelectEl.appendChild(defaultOpt);
 
-          if (filterText && routeSelectEl.options.length === 2) {
-            routeSelectEl.selectedIndex = 1;
-            loadRoute(routeSelectEl.value);
-          } else {
-            routeSelectEl.value = '';
-          }
-        }
+  // Sort all routes alphabetically by display name
+  const entries = Object.entries(ROUTE_INDEX)
+    .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
 
-        routeSelectEl.addEventListener('change', (e) => {
-          const key = e.target.value;
-          if (!key) {
-            clearRouteView();
-          } else {
-            loadRoute(key);
-          }
-        });
+  entries.forEach(([key, meta]) => {
+    const name = meta.name || key;
+    const haystack = (name + ' ' + key).toLowerCase();
+
+    if (!txt || haystack.includes(txt)) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = name;
+      routeSelectEl.appendChild(opt);
+    }
+  });
+
+  // Auto-select single match when searching
+  if (filterText && routeSelectEl.options.length === 2) {
+    routeSelectEl.selectedIndex = 1;
+    loadRoute(routeSelectEl.value);
+  } else {
+    routeSelectEl.value = '';
+  }
+}
 
         routeSearchEl.addEventListener('input', (e) => {
           const text = e.target.value;
