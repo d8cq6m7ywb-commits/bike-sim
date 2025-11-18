@@ -1107,42 +1107,40 @@
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <script>
         /* ------------ Route index (dropdown options) ------------- */
-        const ROUTE_INDEX = {
-          /* Challenge full & 70.3 */
-const ROUTE_INDEX = {
-  /* Challenge full & 70.3 */
-  challenge_roth: {
-    name: "Challenge Roth",
-    file: "routes/Challenge_Roth.json",
-    tempC: 21, // typical bike-leg morning temp (July, Roth)
-  },
+      const ROUTE_INDEX = {
+  /* ---------- Challenge full & 70.3 ---------- */
   challenge_israman: {
     name: "Challenge Israman",
     file: "routes/Challenge_Israman.json",
-    tempC: 20, // desert plateau, cool start but warms quickly
+    tempC: 20,
+  },
+  challenge_roth: {
+    name: "Challenge Roth",
+    file: "routes/Challenge_Roth.json",
+    tempC: 21,
   },
   challenge703_israman: {
-    name: "Challenge703 Israman",
+    name: "Challenge70.3 Israman",
     file: "routes/Challenge70.3_Israman.json",
-    tempC: 18, // earlier finish, slightly cooler overall
+    tempC: 18,
   },
   challenge703_oman: {
-    name: "Challenge703 Oman",
+    name: "Challenge70.3 Oman",
     file: "routes/Challenge70.3_Oman.json",
-    tempC: 20, // Muscat in Feb: mild early, heats later
+    tempC: 20,
   },
   challenge703_rio: {
-    name: "Challenge703 Rio de Janeiro",
+    name: "Challenge70.3 Rio de Janeiro",
     file: "routes/Challenge70.3_Rio_de_Janeiro.json",
-    tempC: 19, // autumn morning in Rio
+    tempC: 19,
   },
   challenge703_sir_bani_yas: {
-    name: "Challenge703 Sir Bani Yas",
+    name: "Challenge70.3 Sir Bani Yas",
     file: "routes/Challenge70.3_Sir_Bani_Yas.json",
-    tempC: 24, // Gulf spring race, already warm by bike
+    tempC: 24,
   },
 
-  /* IM 70.3 (half distance) */
+  /* ---------- IM 70.3 ---------- */
   im703_alcudia_mallorca: {
     name: "IM703 Alcudia Mallorca",
     file: "routes/IM70.3_Alcudia_Mallorca.json",
@@ -1160,7 +1158,7 @@ const ROUTE_INDEX = {
   },
   im703_da_nang: {
     name: "IM703 Da Nang",
-    file: "routes/IM70.3_Danang.json",
+    file: "routes/IM70.3_Da_nang.json",
     tempC: 30,
   },
   im703_desaru_coast: {
@@ -1171,7 +1169,7 @@ const ROUTE_INDEX = {
   im703_florida: {
     name: "IM703 Florida",
     file: "routes/IM70.3_Florida.json",
-    tempC: 20, // Haines City spring race, low 20s by bike
+    tempC: 20,
   },
   im703_geelong: {
     name: "IM703 Geelong",
@@ -1186,7 +1184,7 @@ const ROUTE_INDEX = {
   im703_hawaii: {
     name: "IM703 Hawaii",
     file: "routes/IM70.3_Hawaii.json",
-    tempC: 26, // Kohala Coast, hot and humid already in the morning
+    tempC: 26,
   },
   im703_knokke_heist: {
     name: "IM703 Knokke-Heist",
@@ -1201,7 +1199,7 @@ const ROUTE_INDEX = {
   im703_la_quinta: {
     name: "IM703 La Quinta",
     file: "routes/IM70.3_La_Quinta.json",
-    tempC: 14, // December desert morning, cool but sunny
+    tempC: 14,
   },
   im703_maine: {
     name: "IM703 Maine",
@@ -1231,12 +1229,12 @@ const ROUTE_INDEX = {
   im703_north_carolina: {
     name: "IM703 North Carolina",
     file: "routes/IM70.3_North_Carolina.json",
-    tempC: 14, // October, cool start, moderate by mid-bike
+    tempC: 14,
   },
   im703_northern_california: {
     name: "IM703 Northern California",
     file: "routes/IM70.3_Northern_California.json",
-    tempC: 26, // Redding in August, hot even in late morning
+    tempC: 26,
   },
   im703_oceanside: {
     name: "IM703 Oceanside",
@@ -1271,16 +1269,16 @@ const ROUTE_INDEX = {
   im703_sables_d_olonne: {
     name: "IM703 Les Sables d’Olonne",
     file: "routes/IM70.3_Sables_d_Olonne.json",
-    tempC: 18, // June Atlantic coast, fresh start, low-20s later
+    tempC: 18,
   },
   im703_shanghai: {
     name: "IM703 Shanghai",
     file: "routes/IM70.3_Shanghai.json",
-    tempC: 20, // autumn morning near Shanghai
+    tempC: 20,
   },
   im703_sunshine_coast: {
     name: "IM703 Sunshine Coast",
-    file: "routes/IM70.3_SUNSHINE_COAST.json",
+    file: "routes/IM70.3_Sunshine_Coast.json",
     tempC: 18,
   },
   im703_switzerland: {
@@ -1291,12 +1289,12 @@ const ROUTE_INDEX = {
   im703_tallinn: {
     name: "IM703 Tallinn",
     file: "routes/IM70.3_Tallinn.json",
-    tempC: 15, // August Baltic morning, cool/moderate
+    tempC: 15,
   },
   im703_texas_galveston: {
     name: "IM703 Texas Galveston",
     file: "routes/IM70.3_Texas_Galveston.json",
-    tempC: 21, // Gulf spring, humid low-20s
+    tempC: 21,
   },
   im703_valencia: {
     name: "IM703 Valencia",
@@ -1311,7 +1309,7 @@ const ROUTE_INDEX = {
   im703_vichy: {
     name: "IM703 Vichy",
     file: "routes/IM70.3_Vichy.json",
-    tempC: 22, // late-Aug central France, often heats fast
+    tempC: 22,
   },
   im703_washington_tricities: {
     name: "IM703 Washington Tri-Cities",
@@ -1334,166 +1332,166 @@ const ROUTE_INDEX = {
     tempC: 20,
   },
 
-  /* IM full distance */
+  /* ---------- IM full distance ---------- */
   im_arizona: {
     name: "IM Arizona",
     file: "routes/IM_Arizona.json",
-    tempC: 16, // Tempe in Nov: cool morning, mild daytime
+    tempC: 16,
   },
   im_australia: {
     name: "IM Australia",
     file: "routes/IM_Australia.json",
-    tempC: 17, // Port Macquarie in May
+    tempC: 17,
   },
   im_barcelona: {
     name: "IM Barcelona",
     file: "routes/IM_Barcelona.json",
-    tempC: 20, // Calella in Oct, high-teens / low-20s
+    tempC: 20,
   },
   im_brazil: {
     name: "IM Brazil",
     file: "routes/IM_Brazil.json",
-    tempC: 18, // Florianópolis late autumn, mild start
+    tempC: 18,
   },
   im_cairns: {
     name: "IM Cairns",
     file: "routes/IM_Cairns.json",
-    tempC: 21, // early winter tropics
+    tempC: 21,
   },
   im_california: {
     name: "IM California",
     file: "routes/IM_California.json",
-    tempC: 18, // Sacramento late Oct
+    tempC: 18,
   },
   im_cascais: {
     name: "IM Cascais",
     file: "routes/IM_Cascais.json",
-    tempC: 20, // Portuguese Atlantic coast autumn
+    tempC: 20,
   },
   im_cozumel: {
     name: "IM Cozumel",
     file: "routes/IM_Cozumel.json",
-    tempC: 24, // hot/humid even in the morning
+    tempC: 24,
   },
   im_danang: {
     name: "IM Danang",
     file: "routes/IM_Danang.json",
-    tempC: 30, // Da Nang in May
+    tempC: 30,
   },
   im_florida: {
     name: "IM Florida",
     file: "routes/IM_Florida.json",
-    tempC: 19, // Panama City Beach in Nov
-  },
-  im_hamburg: {
-    name: "IM Hamburg 2025",
-    file: "routes/IM_Hamburg.json",
-    tempC: 17, // July, cool start, low-20s peak
-  },
-  im_kalmar: {
-    name: "IM Kalmar",
-    file: "routes/IM_Kalmar.json",
-    tempC: 18, // August Sweden
-  },
-  im_kona: {
-    name: "IM World Championship Kona",
-    file: "routes/IM_Kona.json",
-    tempC: 28, // already high-20s on bike
-  },
-  im_lake_placid: {
-    name: "IM Lake Placid",
-    file: "routes/IM_Lake_Placid.json",
-    tempC: 18, // Adirondack summer
-  },
-  im_maryland: {
-    name: "IM Maryland",
-    file: "routes/IM_Maryland.json",
-    tempC: 20, // Cambridge in Sept
-  },
-  im_new_zealand: {
-    name: "IM New Zealand",
-    file: "routes/IM_New_Zealand.json",
-    tempC: 14, // Taupō early March
-  },
-  im_nice: {
-    name: "IM Nice",
-    file: "routes/IM_Nice.json",
-    tempC: 26, // Côte d’Azur in June
-  },
-  im_ottawa: {
-    name: "IM Ottawa",
-    file: "routes/IM_Ottawa.json",
-    tempC: 22, // early Aug, can be hot
-  },
-  im_penghu: {
-    name: "IM Penghu",
-    file: "routes/IM_Penghu.json",
-    tempC: 27, // warm and humid
-  },
-  im_philippines: {
-    name: "IM Philippines",
-    file: "routes/IM_Philippines.json",
-    tempC: 28, // Subic Bay in June
-  },
-  im_sables_d_olonne: {
-    name: "IM Les Sables d’Olonne",
-    file: "routes/IM_Sables_d_Olonne.json",
-    tempC: 16, // full distance, cooler start
-  },
-  im_san_juan: {
-    name: "IM San Juan",
-    file: "routes/IM_San_juan.json",
-    tempC: 13, // San Juan, Argentina
-  },
-  im_tallinn: {
-    name: "IM Tallinn",
-    file: "routes/IM_Tallinn.json",
-    tempC: 16, // August Estonia
-  },
-  im_texas: {
-    name: "IM Texas",
-    file: "routes/IM_Texas.json",
-    tempC: 27, // The Woodlands in May
-  },
-  im_valdivia: {
-    name: "IM Valdivia",
-    file: "routes/IM_Valdivia.json",
-    tempC: 14, // southern Chile late spring
-  },
-  im_vittoria_gasteiz: {
-    name: "IM Vittoria-Gasteiz",
-    file: "routes/IM_Vittoria_Gasteiz.json",
-    tempC: 18, // Basque Country July
-  },
-  im_wales: {
-    name: "IM Wales",
-    file: "routes/IM_Wales.json",
-    tempC: 14, // Tenby in Sept
+    tempC: 19,
   },
   im_frankfurt: {
     name: "IM Frankfurt",
     file: "routes/IM_Frankfurt.json",
-    tempC: 23, // can be properly hot
+    tempC: 23,
+  },
+  im_hamburg: {
+    name: "IM Hamburg 2025",
+    file: "routes/IM_Hamburg.json",
+    tempC: 17,
+  },
+  im_kalmar: {
+    name: "IM Kalmar",
+    file: "routes/IM_Kalmar.json",
+    tempC: 18,
+  },
+  im_kona: {
+    name: "IM World Championship Kona",
+    file: "routes/IM_Kona.json",
+    tempC: 28,
+  },
+  im_lake_placid: {
+    name: "IM Lake Placid",
+    file: "routes/IM_Lake_Placid.json",
+    tempC: 18,
   },
   im_lanzarote: {
     name: "IM Lanzarote",
     file: "routes/IM_Lanzarote.json",
-    tempC: 22, // Canary Islands in May
+    tempC: 22,
+  },
+  im_maryland: {
+    name: "IM Maryland",
+    file: "routes/IM_Maryland.json",
+    tempC: 20,
+  },
+  im_new_zealand: {
+    name: "IM New Zealand",
+    file: "routes/IM_New_Zealand.json",
+    tempC: 14,
+  },
+  im_nice: {
+    name: "IM Nice",
+    file: "routes/IM_Nice.json",
+    tempC: 26,
+  },
+  im_ottawa: {
+    name: "IM Ottawa",
+    file: "routes/IM_Ottawa.json",
+    tempC: 22,
+  },
+  im_penghu: {
+    name: "IM Penghu",
+    file: "routes/IM_Penghu.json",
+    tempC: 27,
+  },
+  im_philippines: {
+    name: "IM Philippines",
+    file: "routes/IM_Philippines.json",
+    tempC: 28,
+  },
+  im_sables_d_olonne: {
+    name: "IM Les Sables d’Olonne",
+    file: "routes/IM_Sables_d_Olonne.json",
+    tempC: 16,
+  },
+  im_san_juan: {
+    name: "IM San Juan",
+    file: "routes/IM_San_juan.json",
+    tempC: 13,
   },
   im_south_africa: {
     name: "IM South Africa",
     file: "routes/IM_South_Africa.json",
-    tempC: 19, // Port Elizabeth late March
+    tempC: 19,
+  },
+  im_tallinn: {
+    name: "IM Tallinn",
+    file: "routes/IM_Tallinn.json",
+    tempC: 16,
+  },
+  im_texas: {
+    name: "IM Texas",
+    file: "routes/IM_Texas.json",
+    tempC: 27,
+  },
+  im_valdivia: {
+    name: "IM Valdivia",
+    file: "routes/IM_Valdivia.json",
+    tempC: 14,
+  },
+  im_vittoria_gasteiz: {
+    name: "IM Vittoria-Gasteiz",
+    file: "routes/IM_Vittoria_Gasteiz.json",
+    tempC: 18,
+  },
+  im_wales: {
+    name: "IM Wales",
+    file: "routes/IM_Wales.json",
+    tempC: 14,
   },
   im_western_australia: {
     name: "IM Western Australia",
     file: "routes/IM_Western_Australia.json",
-    tempC: 19, // Busselton early Dec
+    tempC: 19,
   },
   im_wisconsin: {
     name: "IM Wisconsin",
     file: "routes/IM_Wisconsin.json",
-    tempC: 18, // Madison early Sept
+    tempC: 18,
   },
 };
         /* -------- input helpers & physics ---------- */
