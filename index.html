@@ -2806,7 +2806,6 @@ if (toggleCourseBtn && courseAnalysisEl) {
       : "Hide course analysis";
 
     // when opening, make sure everything is refreshed
-        // when opening, make sure everything is refreshed
     if (!hidden) {
       const u = document.getElementById("unit").value || "metric";
       updateChartUnits(u);
@@ -2823,7 +2822,11 @@ if (toggleCourseBtn && courseAnalysisEl) {
         }, 0);
       }
     }
-        function clearRouteView() {
+  });
+}
+
+//  define clearRouteView OUTSIDE the toggle block
+function clearRouteView() {
   if (polyline && map) {
     map.removeLayer(polyline);
     polyline = null;
