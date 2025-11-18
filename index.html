@@ -2953,7 +2953,93 @@ function buildNormalizedRoute(raw) {
 
   return out;
 }
+function buildSmoothedProfile(profile) {
+  if (
+    !profile ||
+    !Array.isArray(profile.distances) ||
+    !Array.isArray(profile.elevations) ||
+    !Array.isArray(profile.latlngs)
+  ) {
+    return null;
+  }
 
+  const srcDist = profile.distances;
+  const srcElev = profile.elevations;
+  const srcLatLng = profile.latlngs;
+  const n = Math.min(srcDist.length, srcElev.length, srcLatLng.length);
+
+  if (n < 2) return null;
+
+  const totalDist = srcDist[n - 1]; // km
+  if (!isFinite(totalDist) || totalDist <= 0) return null;
+
+  // Target step ~0.25 km, but clamp for very short/very long routes
+  const targetStep = Math.max(0.1, Math.min(0.5, totalDist / 400)); // 0.1–0.5 km
+
+  const newDist = [];
+  const newElev = [];
+  const newLatLng = [];
+
+  let d = 0;
+  let j = 0;
+
+  while (d < totalDist - 1e-6) {
+    // move j so that srcDist[j] <= d <= srcDist[j+1]
+    while (j < n - 2 && srcDist[j + 1] < d) {
+      j++;
+    }
+
+    const d0 = srcDist[j];
+    const d1 = srcDist[j + 1];
+    const t = d1 > d0 ? (d - d0) / (d1 - d0) : 0;
+
+    const e0 = srcElev[j];
+    const e1 = srcElev[j + 1];
+    const e = e0 + (e1 - e0) * t;
+
+    const lat0 = srcLatLng[j][0];
+    const lon0 = srcLatLng[j][1];
+    const lat1 = srcLatLng[j + 1][0];
+    const lon1 = srcLatLng[j + 1][1];
+    const lat = lat0 + (lat1 - lat0) * t;
+    const lon = lon0 + (lon1 - lon0) * t;
+
+    newDist.push(d);
+    newElev.push(e);
+    newLatLng.push([lat, lon]);
+
+    d += targetStep;
+  }
+
+  // Ensure final point is included
+  if (newDist.length === 0 || newDist[newDist.length - 1] < totalDist - 1e-6) {
+    newDist.push(totalDist);
+    newElev.push(srcElev[n - 1]);
+    newLatLng.push(srcLatLng[n - 1]);
+  }
+
+  // Light additional smoothing: 5-point moving average on elevation
+  const smoothElev = newElev.slice();
+  const win = 2;
+  for (let i = 0; i < newElev.length; i++) {
+    let sum = 0;
+    let cnt = 0;
+    for (let k = -win; k <= win; k++) {
+      const idx = i + k;
+      if (idx >= 0 && idx < newElev.length) {
+        sum += newElev[idx];
+        cnt++;
+      }
+    }
+    if (cnt > 0) smoothElev[i] = sum / cnt;
+  }
+
+  return {
+    distances: newDist,
+    elevations: smoothElev,
+    latlngs: newLatLng,
+  };
+}
         async function loadRoute(key) {
           if (!key) return;
           const meta = ROUTE_INDEX[key];
@@ -2967,6 +3053,7 @@ function buildNormalizedRoute(raw) {
             const raw = await res.json();
             const r = buildNormalizedRoute(raw);
             window.currentRouteProfile = r;
+            window.currentRouteSmooth = buildSmoothedProfile(r); // new: smoothed copy
 
             if (polyline) {
               map.removeLayer(polyline);
