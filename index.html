@@ -1530,33 +1530,39 @@
             rebuildTechnicalChallenges();
           }
         }
-        function convertWeight(inp, unit, id) {
-          let v = parseFloat(inp.value) || 0,
-            tgt = document.getElementById(id + "-" + unit);
-          if (!tgt) return;
-          tgt.value =
-            unit === "kg"
-              ? (v * 2.20462).toFixed(2)
-              : (v / 2.20462).toFixed(2);
-        }
-        function convertDistance(inp, unit, id) {
-          let v = parseFloat(inp.value) || 0,
-            tgt = document.getElementById(id + "-" + unit);
-          if (!tgt) return;
-          tgt.value =
-            unit === "km"
-              ? (v / 1.60934).toFixed(2)
-              : (v * 1.60934).toFixed(2);
-        }
-        function convertLength(inp, unit, id) {
-          let v = parseFloat(inp.value) || 0,
-            t = document.getElementById(id + "-" + unit);
-          if (!t) return;
-          t.value =
-            unit === "m"
-              ? (v * 3.28084).toFixed(2)
-              : (v / 3.28084).toFixed(2);
-        }
+       function convertWeight(inp, unit, id) {
+  let v = parseFloat(inp.value) || 0;
+  const tgt = document.getElementById(id + "-" + unit);
+  if (!tgt) return;
+
+  // unit = target unit
+  tgt.value =
+    unit === "kg"
+      ? (v / 2.20462).toFixed(2)   // input is lb -> convert to kg
+      : (v * 2.20462).toFixed(2);  // input is kg -> convert to lb
+}
+       function convertDistance(inp, unit, id) {
+  let v = parseFloat(inp.value) || 0;
+  const tgt = document.getElementById(id + "-" + unit);
+  if (!tgt) return;
+
+  // unit = target unit
+  tgt.value =
+    unit === "km"
+      ? (v * 1.60934).toFixed(2)   // input is mi -> km
+      : (v / 1.60934).toFixed(2);  // input is km -> mi
+}
+function convertLength(inp, unit, id) {
+  let v = parseFloat(inp.value) || 0;
+  const t = document.getElementById(id + "-" + unit);
+  if (!t) return;
+
+  // unit = target unit
+  t.value =
+    unit === "m"
+      ? (v / 3.28084).toFixed(2)   // input is ft -> m
+      : (v * 3.28084).toFixed(2);  // input is m -> ft
+}
         function convertTemperature(inp, unit, id) {
           let v = parseFloat(inp.value) || 0,
             t = document.getElementById(id + "-" + unit);
@@ -2777,7 +2783,33 @@
         const routeSearchEl = document.getElementById("routeSearch");
         const resetRouteBtn = document.getElementById("resetRouteBtn");
         const routeMetaEl = document.getElementById("routeMeta");
+// Build initial list
+rebuildRouteOptions("");
 
+// Live search
+if (routeSearchEl) {
+  routeSearchEl.addEventListener("input", function (e) {
+    rebuildRouteOptions(e.target.value);
+  });
+}
+
+// Reset button
+if (resetRouteBtn) {
+  resetRouteBtn.addEventListener("click", function () {
+    routeSearchEl.value = "";
+    rebuildRouteOptions("");
+    clearRouteView();
+    localStorage.removeItem("bikesim_last_route");
+  });
+}
+
+// Optional: auto-select last route
+const lastKey = localStorage.getItem("bikesim_last_route");
+if (lastKey && ROUTE_INDEX[lastKey]) {
+  routeSelectEl.value = lastKey;
+  loadRoute(lastKey);
+}
+        
         routeSelectEl.addEventListener("change", (e) => {
           const key = e.target.value;
           if (key) {
@@ -3056,104 +3088,60 @@
           }
         }
 
-        function rebuildRouteOptions(filterText) {
-          const txt = (filterText || "").toLowerCase();
+     function rebuildRouteOptions(filterText) {
+  const txt = (filterText || "").toLowerCase();
 
-          while (routeSelectEl.options.length > 0) {
-            routeSelectEl.remove(0);
-          }
+  // Clear existing options
+  while (routeSelectEl.options.length > 0) {
+    routeSelectEl.remove(0);
+  }
 
-          const defaultOpt = document.createElement("option");
-          defaultOpt.value = "";
-          defaultOpt.textContent = "— No route selected —";
-          routeSelectEl.appendChild(defaultOpt);
+  // Default "no route" option
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = "— No route selected —";
+  routeSelectEl.appendChild(defaultOpt);
 
-          const entries = Object.entries(ROUTE_INDEX).sort(([, a], [, b]) =>
-            (a.name || "").localeCompare(b.name || "")
-          );
+  // Build a simple array of { key, meta } so we can sort it
+  const entries = [];
+  for (const key in ROUTE_INDEX) {
+    if (Object.prototype.hasOwnProperty.call(ROUTE_INDEX, key)) {
+      entries.push({ key: key, meta: ROUTE_INDEX[key] });
+    }
+  }
 
-          entries.forEach(([key, meta]) => {
-            const name = meta.name || key;
-            const haystack = (name + " " + key).toLowerCase();
+  // Sort by race name
+  entries.sort(function (a, b) {
+    const nameA = (a.meta.name || a.key).toLowerCase();
+    const nameB = (b.meta.name || b.key).toLowerCase();
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    return 0;
+  });
 
-            if (!txt || haystack.includes(txt)) {
-              const opt = document.createElement("option");
-              opt.value = key;
-              opt.textContent = name;
-              routeSelectEl.appendChild(opt);
-            }
-          });
+  // Add options, applying text filter if any
+  entries.forEach(function (entry) {
+    const key = entry.key;
+    const meta = entry.meta;
+    const name = meta.name || key;
+    const haystack = (name + " " + key).toLowerCase();
 
-          if (filterText && routeSelectEl.options.length === 2) {
-            routeSelectEl.selectedIndex = 1;
-            loadRoute(routeSelectEl.value);
-          } else {
-            routeSelectEl.value = "";
-          }
-        }
+    if (!txt || haystack.indexOf(txt) !== -1) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = name;
+      routeSelectEl.appendChild(opt);
+    }
+  });
 
-        routeSearchEl.addEventListener("input", (e) => {
-          const text = e.target.value;
-          rebuildRouteOptions(text);
-
-          if (!text) {
-            clearRouteView();
-            localStorage.removeItem("bikesim_last_route");
-          }
-        });
-
-        resetRouteBtn.addEventListener("click", () => {
-          routeSearchEl.value = "";
-          rebuildRouteOptions("");
-          clearRouteView();
-          localStorage.removeItem("bikesim_last_route");
-        });
-
-        changeUnit();
-        changeTyreCondition();
-        updateCalcModeUI();
-        calculateResult();
-        if (typeof updateChartUnits === "function") {
-          const u0 =
-            document.getElementById("unit").value || "metric";
-          updateChartUnits(u0);
-        }
-        if (typeof rebuildTechnicalChallenges === "function") {
-          rebuildTechnicalChallenges();
-        }
-
-        const courseToggleBtn =
-          document.getElementById("toggleCourseAnalysis");
-        const courseAnalysisEl =
-          document.getElementById("courseAnalysis");
-        if (courseToggleBtn && courseAnalysisEl) {
-          courseToggleBtn.addEventListener("click", () => {
-            const isHidden =
-              courseAnalysisEl.classList.toggle(
-                "courseAnalysis--hidden"
-              );
-            courseToggleBtn.textContent = isHidden
-              ? "Show course analysis"
-              : "Hide course analysis";
-            if (!isHidden) {
-              setTimeout(() => {
-                if (typeof map !== "undefined" && map) {
-                  map.invalidateSize();
-                }
-              }, 50);
-            }
-          });
-        }
-
-        rebuildRouteOptions("");
-        const savedRoute =
-          localStorage.getItem("bikesim_last_route");
-        if (savedRoute && ROUTE_INDEX[savedRoute]) {
-          routeSelectEl.value = savedRoute;
-          loadRoute(savedRoute);
-        } else {
-          clearRouteView();
-        }
+  // Auto-select single match when filtering
+  if (filterText && routeSelectEl.options.length === 2) {
+    routeSelectEl.selectedIndex = 1;
+    loadRoute(routeSelectEl.value);
+  } else {
+    routeSelectEl.value = "";
+  }
+}
       </script>
     </div>
   </body>
