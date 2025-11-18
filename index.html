@@ -2806,15 +2806,23 @@ if (toggleCourseBtn && courseAnalysisEl) {
       : "Hide course analysis";
 
     // when opening, make sure everything is refreshed
+        // when opening, make sure everything is refreshed
     if (!hidden) {
       const u = document.getElementById("unit").value || "metric";
       updateChartUnits(u);
       rebuildTechnicalChallenges();
       rebuildAdvancedPacing();
+
+      // IMPORTANT: fix Leaflet sizing after un-hiding
+      if (map) {
+        setTimeout(() => {
+          map.invalidateSize();
+          if (polyline) {
+            map.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+          }
+        }, 0);
+      }
     }
-  });
-}
-}
         function clearRouteView() {
   if (polyline && map) {
     map.removeLayer(polyline);
