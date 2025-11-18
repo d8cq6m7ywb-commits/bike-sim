@@ -2815,6 +2815,29 @@ if (toggleCourseBtn && courseAnalysisEl) {
   });
 }
 }
+        function clearRouteView() {
+  if (polyline && map) {
+    map.removeLayer(polyline);
+    polyline = null;
+  }
+  if (map) {
+    map.setView([0, 0], 2);
+  }
+  if (elevChart) {
+    elevChart.data.labels = [];
+    elevChart.data.datasets[0].data = [];
+    elevChart.update();
+  }
+  routeMetaEl.textContent =
+    "No route selected. You can still enter distance, climb, and altitude manually.";
+  window.currentRouteProfile = null;
+  rebuildAdvancedPacing();
+  const tech = document.getElementById("techChallenges");
+  if (tech) {
+    tech.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
+  }
+}
         /* ---- Normalisation helpers for route JSON ---- */
 
         function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -3171,27 +3194,6 @@ function buildSmoothedProfile(profile) {
               tech.innerHTML =
                 '<p style="margin:0;font-size:13px;color:#92400e;">Error loading route data, cannot compute technical challenges.</p>';
             }
-          }
-        }
-
-        function clearRouteView() {
-          if (polyline) {
-            map.removeLayer(polyline);
-            polyline = null;
-          }
-          map.setView([0, 0], 2);
-          elevChart.data.labels = [];
-          elevChart.data.datasets[0].data = [];
-          elevChart.update();
-          routeMetaEl.textContent =
-            "No route selected. You can still enter distance, climb, and altitude manually.";
-          window.currentRouteProfile = null;
-          rebuildAdvancedPacing();
-          const tech =
-            document.getElementById("techChallenges");
-          if (tech) {
-            tech.innerHTML =
-              '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
           }
         }
 
