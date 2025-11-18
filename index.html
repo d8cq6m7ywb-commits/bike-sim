@@ -51,7 +51,7 @@
         padding-bottom: 5px;
       }
 
-      .route__selector {
+      .__selector {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -64,30 +64,30 @@
         max-width: 780px;
         justify-content: center;
       }
-      .route__selector label {
+      .__selector label {
         font-weight: 600;
         color: #333;
       }
-      .route__selector input,
-      .route__selector select,
-      .route__selector button {
+      .__selector input,
+      .__selector select,
+      .__selector button {
         padding: 6px 8px;
         border-radius: 5px;
         border: 1px solid #ccc;
         font-size: 14px;
       }
-      .route__selector input {
+      .__selector input {
         min-width: 160px;
       }
-      .route__selector button {
+      .__selector button {
         background: #083258;
         color: #fff;
         cursor: pointer;
       }
-      .route__selector button:hover {
+      .__selector button:hover {
         background: #0b447f;
       }
-      .route__meta {
+      .__meta {
         font-size: 13px;
         color: #555;
         flex: 1 1 100%;
@@ -287,7 +287,7 @@
         display: none;
       }
 
-      .route__visuals {
+      .__visuals {
         margin-top: 22px;
         display: grid;
         grid-template-columns: 1fr;
@@ -326,7 +326,7 @@
         .col__calc {
           grid-template-columns: 1fr 1fr;
         }
-        .route__visuals {
+        .__visuals {
           grid-template-columns: 1fr;
         }
         #map,
@@ -1500,7 +1500,7 @@
             tempC: 18,
           },
         };
-
+console.log("ROUTE_INDEX keys:", Object.keys(ROUTE_INDEX).length);
         /* -------- input helpers & physics ---------- */
 
         function changeTyreCondition() {
