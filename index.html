@@ -2843,37 +2843,37 @@ if (lastKey && ROUTE_INDEX[lastKey]) {
 function buildNormalizedRoute(raw) {
   const out = Object.assign({}, raw);
 
+  const elevRaw = Array.isArray(raw.elevations) ? raw.elevations : [];
   const latlngsRaw = Array.isArray(raw.latlngs) ? raw.latlngs : [];
-  const elevRaw    = Array.isArray(raw.elevations) ? raw.elevations : [];
 
-  const n = Math.min(latlngsRaw.length, elevRaw.length);
-
-  // Helper: compute climb / min / max from elevation array
-  function climbFromElevations(elevArr) {
+  // --- Helper: compute climb, min, max from ANY elevation array ---
+  function climbFromElevations(eArr) {
+    if (!Array.isArray(eArr) || eArr.length < 2) {
+      return { totalClimb: 0, minE: 0, maxE: 0 };
+    }
     let totalClimb = 0;
-    if (!elevArr.length) return { totalClimb: 0, minE: 0, maxE: 0 };
-
-    let minE = Number(elevArr[0]);
-    let maxE = Number(elevArr[0]);
-
-    for (let i = 1; i < elevArr.length; i++) {
-      const ePrev = Number(elevArr[i - 1]);
-      const eCur  = Number(elevArr[i]);
-      const de    = eCur - ePrev;
+    let minE = Number(eArr[0]);
+    let maxE = Number(eArr[0]);
+    for (let i = 1; i < eArr.length; i++) {
+      const prev = Number(eArr[i - 1]);
+      const cur = Number(eArr[i]);
+      const de = cur - prev;
       if (de > 0) totalClimb += de;
-      if (eCur < minE) minE = eCur;
-      if (eCur > maxE) maxE = eCur;
+      if (cur < minE) minE = cur;
+      if (cur > maxE) maxE = cur;
     }
     return { totalClimb, minE, maxE };
   }
 
-  // Case 1: we have usable latlng + elev → full normalisation as before
-  if (n >= 2) {
-    const latlngs    = [];
-    const elevations = [];
+  const { totalClimb, minE, maxE } = climbFromElevations(elevRaw);
 
+  // --- Case A: we have usable lat/lon + elev → compute distances from GPS ---
+  const n = Math.min(latlngsRaw.length, elevRaw.length);
+  if (n >= 2) {
+    const latlngs = [];
+    const elevations = [];
     for (let i = 0; i < n; i++) {
-      const pt  = latlngsRaw[i];
+      const pt = latlngsRaw[i];
       const lat = Number(pt[0]);
       const lon = Number(pt[1]);
       latlngs.push([lat, lon]);
@@ -2883,7 +2883,6 @@ function buildNormalizedRoute(raw) {
     const distances = [];
     let cumKm = 0;
     distances.push(0);
-
     for (let i = 1; i < n; i++) {
       const [lat1, lon1] = latlngs[i - 1];
       const [lat2, lon2] = latlngs[i];
@@ -2892,36 +2891,39 @@ function buildNormalizedRoute(raw) {
       distances.push(Number(cumKm.toFixed(3)));
     }
 
-    const { totalClimb, minE, maxE } = climbFromElevations(elevations);
-
     const computedDistKm = distances[distances.length - 1] || 0;
     const distKmFinal =
       typeof raw.distance_km === "number" && raw.distance_km > 0.1
         ? raw.distance_km
         : computedDistKm;
 
-    out.distances      = distances;
-    out.elevations     = elevations;
-    out.latlngs        = latlngs;
-    out.distance_km    = distKmFinal;
-    out.total_climb_m  =
+    out.distances = distances;
+    out.elevations = elevations;
+    out.latlngs = latlngs;
+    out.distance_km = distKmFinal;
+
+    // ALWAYS prefer computed climb if raw is 0 / missing
+    out.total_climb_m =
       typeof raw.total_climb_m === "number" && raw.total_climb_m > 0
         ? raw.total_climb_m
         : Math.round(totalClimb);
-    out.elev_min       =
-      typeof raw.elev_min === "number" ? raw.elev_min : minE;
-    out.elev_max       =
-      typeof raw.elev_max === "number" ? raw.elev_max : maxE;
+
+    out.elev_min =
+      typeof raw.elev_min === "number" && raw.elev_min !== 0
+        ? raw.elev_min
+        : minE;
+    out.elev_max =
+      typeof raw.elev_max === "number" && raw.elev_max !== 0
+        ? raw.elev_max
+        : maxE;
 
     return out;
   }
 
-  // Case 2: we *don’t* have good latlngs, but might still have elevations/distances
-  out.distances   = Array.isArray(raw.distances) ? raw.distances : [];
-  out.elevations  = elevRaw;
-  out.latlngs     = latlngsRaw;
-
-  const { totalClimb, minE, maxE } = climbFromElevations(elevRaw);
+  // --- Case B: GPS is unusable, but we might still have elevations / distances ---
+  out.elevations = elevRaw;
+  out.latlngs = latlngsRaw;
+  out.distances = Array.isArray(raw.distances) ? raw.distances : [];
 
   // distance_km: prefer explicit, else from distances array
   let distKmFromArray = 0;
@@ -2929,12 +2931,12 @@ function buildNormalizedRoute(raw) {
     const last = Number(out.distances[out.distances.length - 1]);
     if (isFinite(last) && last > 0) distKmFromArray = last;
   }
-
   out.distance_km =
     typeof raw.distance_km === "number" && raw.distance_km > 0
       ? raw.distance_km
       : distKmFromArray;
 
+  // Again, ALWAYS prefer computed climb if raw is 0 / missing
   out.total_climb_m =
     typeof raw.total_climb_m === "number" && raw.total_climb_m > 0
       ? raw.total_climb_m
@@ -2944,7 +2946,6 @@ function buildNormalizedRoute(raw) {
     typeof raw.elev_min === "number" && raw.elev_min !== 0
       ? raw.elev_min
       : minE;
-
   out.elev_max =
     typeof raw.elev_max === "number" && raw.elev_max !== 0
       ? raw.elev_max
