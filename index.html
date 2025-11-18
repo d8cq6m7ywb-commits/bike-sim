@@ -2585,85 +2585,102 @@ function convertLength(inp, unit, id) {
         }
 
         /* ---------------- Map + Chart ---------------- */
+// Put these near the top, before any functions that use them:
+let map = null;
+let polyline = null;
+let elevChart = null;
 
-        const map = L.map("map").setView([0, 0], 2);
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: "&copy; OpenStreetMap contributors",
-        }).addTo(map);
+// Safely initialize map + chart
+(function initVisuals() {
+  // Map / Leaflet
+  const mapEl = document.getElementById("map");
+  if (mapEl && window.L) {
+    map = L.map("map").setView([0, 0], 2);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+  } else {
+    console.warn("Leaflet (L) or #map not available, skipping map init");
+  }
 
-        let polyline = null;
-
-        const elevCtx =
-          document.getElementById("elevChart").getContext("2d");
-        const elevChart = new Chart(elevCtx, {
-          type: "line",
-          data: {
-            labels: [],
-            datasets: [
-              {
-                data: [],
-                fill: false,
-                borderWidth: 2,
-                pointRadius: 0,
-                tension: 0.2,
-              },
-            ],
+  // Elevation chart / Chart.js
+  const canvas = document.getElementById("elevChart");
+  if (canvas && window.Chart) {
+    const elevCtx = canvas.getContext("2d");
+    elevChart = new Chart(elevCtx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            data: [],
+            fill: false,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.2,
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: {
-                title: {
-                  display: true,
-                  text: "Distance (km)",
-                },
-                ticks: {
-                  maxTicksLimit: 10,
-                  callback: (val) => {
-                    const num =
-                      typeof val === "number"
-                        ? val
-                        : parseFloat(val);
-                    if (!isFinite(num)) return val;
-                    return num.toFixed(1);
-                  },
-                },
-              },
-              y: {
-                title: {
-                  display: true,
-                  text: "Elevation (m)",
-                },
-              },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Distance (km)",
             },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                mode: "index",
-                intersect: false,
-                callbacks: {
-                  title: (items) => {
-                    if (!items.length) return "";
-                    const raw = items[0].label;
-                    const num =
-                      typeof raw === "number"
-                        ? raw
-                        : parseFloat(raw);
-                    if (!isFinite(num)) return "";
-                    return "km " + num.toFixed(2);
-                  },
-                  label: (item) =>
-                    "Elevation: " + item.parsed.y + " m",
-                },
+            ticks: {
+              maxTicksLimit: 10,
+              callback: (val) => {
+                const num =
+                  typeof val === "number" ? val : parseFloat(val);
+                if (!isFinite(num)) return val;
+                return num.toFixed(1);
               },
             },
           },
-        });
+          y: {
+            title: {
+              display: true,
+              text: "Elevation (m)",
+            },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: "index",
+            intersect: false,
+            callbacks: {
+              title: (items) => {
+                if (!items.length) return "";
+                const raw = items[0].label;
+                const num =
+                  typeof raw === "number" ? raw : parseFloat(raw);
+                if (!isFinite(num)) return "";
+                return "km " + num.toFixed(2);
+              },
+              label: (item) => "Elevation: " + item.parsed.y + " m",
+            },
+          },
+        },
+      },
+    });
+  } else {
+    console.warn("Chart.js or #elevChart not available, skipping chart init");
+    // Dummy object so calls to updateChartUnits / clearRouteView don't crash
+    elevChart = {
+      data: { labels: [], datasets: [{ data: [] }] },
+      options: { scales: { x: { title: {} }, y: { title: {} } }, plugins: { tooltip: { callbacks: {} } } },
+      update() {},
+    };
+  }
+})();
 
-        function updateChartUnits(units) {
-          if (!window.currentRouteProfile) return;
+      function updateChartUnits(units) {
+  if (!window.currentRouteProfile || !elevChart) return;
 
           const isImperial = units === "imperial";
           const dist = window.currentRouteProfile.distances || [];
@@ -2796,6 +2813,29 @@ if (toggleCourseBtn && courseAnalysisEl) {
       rebuildAdvancedPacing();
     }
   });
+}
+        function clearRouteView() {
+  if (polyline && map) {
+    map.removeLayer(polyline);
+    polyline = null;
+  }
+  if (map) {
+    map.setView([0, 0], 2);
+  }
+  if (elevChart) {
+    elevChart.data.labels = [];
+    elevChart.data.datasets[0].data = [];
+    elevChart.update();
+  }
+  routeMetaEl.textContent =
+    "No route selected. You can still enter distance, climb, and altitude manually.";
+  window.currentRouteProfile = null;
+  rebuildAdvancedPacing();
+  const tech = document.getElementById("techChallenges");
+  if (tech) {
+    tech.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
+  }
 }
         /* ---- Normalisation helpers for route JSON ---- */
 
