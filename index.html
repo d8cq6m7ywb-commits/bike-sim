@@ -1725,263 +1725,318 @@ function convertLength(inp, unit, id) {
           return vLow;
         }
 
-        function rebuildAdvancedPacing() {
-          const container = document.getElementById("advancedPacing");
-          const mode = document.getElementById("calcMode").value;
-          const strategyRow =
-            document.getElementById("finishTimeStrategyRow");
-          const strategyVal =
-            document.getElementById("finishTimeStrategy");
+   function rebuildAdvancedPacing() {
+  const container = document.getElementById("advancedPacing");
+  const mode = document.getElementById("calcMode").value;
+  const strategyRow = document.getElementById("finishTimeStrategyRow");
+  const strategyVal = document.getElementById("finishTimeStrategy");
 
-          if (!container) return;
+  if (!container) return;
 
-          if (mode !== "strategy_power") {
-            container.innerHTML =
-              '<p style="margin:0;font-size:14px;color:#555;">Select “Power strategy (advanced)” to see per-segment pacing.</p>';
-            if (strategyRow) strategyRow.style.display = "none";
-            if (strategyVal) strategyVal.textContent = "—";
-            return;
-          }
+  if (mode !== "strategy_power") {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Select “Power strategy (advanced)” to see per-segment pacing.</p>';
+    if (strategyRow) strategyRow.style.display = "none";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
 
-          const profile = window.currentRouteProfile;
-          if (
-            !profile ||
-            !profile.distances ||
-            profile.distances.length < 2
-          ) {
-            container.innerHTML =
-              '<p style="margin:0;font-size:14px;color:#555;">Advanced pacing needs a selected course with elevation data.</p>';
-            if (strategyRow) strategyRow.style.display = "flex";
-            if (strategyVal) strategyVal.textContent = "—";
-            return;
-          }
+  // ***** USE SMOOTHED PROFILE IF AVAILABLE *****
+  const profile = window.currentRouteSmooth || window.currentRouteProfile;
+  if (
+    !profile ||
+    !profile.distances ||
+    profile.distances.length < 2
+  ) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Advanced pacing needs a selected course with elevation data.</p>';
+    if (strategyRow) strategyRow.style.display = "flex";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
 
-          const dist = profile.distances;
-          const elev = profile.elevations;
-          const totalDistKm = dist[dist.length - 1];
+  const dist = profile.distances;
+  const elev = profile.elevations;
+  const totalDistKm = dist[dist.length - 1];
 
-          const unit = document.getElementById("unit").value;
-          let wind =
-            unit === "metric"
-              ? parseFloat(
-                  document.getElementById("wind-metric").value || "0"
-                )
-              : parseFloat(
-                  document.getElementById("wind-imperial").value || "0"
-                );
-          wind = unit === "metric" ? wind / 3.6 : wind * 0.44704;
+  const unit = document.getElementById("unit").value;
+  let wind =
+    unit === "metric"
+      ? parseFloat(document.getElementById("wind-metric").value || "0")
+      : parseFloat(document.getElementById("wind-imperial").value || "0");
+  wind = unit === "metric" ? wind / 3.6 : wind * 0.44704;
 
-          const tempC =
-            parseFloat(
-              document.getElementById("temperature-c").value || "0"
-            ) || 0;
-          const alt =
-            parseFloat(
-              document.getElementById("altitude").value || "0"
-            ) || 0;
-          const RH =
-            parseFloat(
-              document.getElementById("relHumidity").value || "0"
-            ) || 0;
-          const pOverride_hPa =
-            parseFloat(
-              document.getElementById("pressure-hpa").value || "0"
-            ) || 0;
+  const tempC = parseFloat(document.getElementById("temperature-c").value || "0") || 0;
+  const alt = parseFloat(document.getElementById("altitude").value || "0") || 0;
+  const RH = parseFloat(document.getElementById("relHumidity").value || "0") || 0;
+  const pOverride_hPa =
+    parseFloat(document.getElementById("pressure-hpa").value || "0") || 0;
 
-          const pressurePa = pressureAtAltitude(alt, pOverride_hPa);
-          const rho = moistAirDensity(pressurePa, tempC, RH);
+  const pressurePa = pressureAtAltitude(alt, pOverride_hPa);
+  const rho = moistAirDensity(pressurePa, tempC, RH);
 
-          const rw =
-            parseFloat(
-              document.getElementById("rider-weight-kg").value || "0"
-            ) || 0;
-          const cg =
-            parseFloat(
-              document.getElementById("clothes-gear-kg").value || "0"
-            ) || 0;
-          const bw =
-            parseFloat(
-              document.getElementById("bike-weight-kg").value || "0"
-            ) || 0;
-          const totalWeight = rw + cg + bw;
+  const rw = parseFloat(document.getElementById("rider-weight-kg").value || "0") || 0;
+  const cg = parseFloat(document.getElementById("clothes-gear-kg").value || "0") || 0;
+  const bw = parseFloat(document.getElementById("bike-weight-kg").value || "0") || 0;
+  const totalWeight = rw + cg + bw;
 
-          const cda =
-            parseFloat(
-              document.getElementById("cdaAeroDynamicResistance")
-                .value || "0.18"
-            ) || 0.18;
-          const crr =
-            parseFloat(
-              document.getElementById("crr_rolling").value || "0.0035"
-            ) || 0.0035;
-          const driveEff =
-            (parseFloat(
-              document.getElementById("driveTrainEfficiency").value ||
-                "98"
-            ) || 98) / 100;
+  const cda =
+    parseFloat(
+      document.getElementById("cdaAeroDynamicResistance").value || "0.18"
+    ) || 0.18;
+  const crr =
+    parseFloat(document.getElementById("crr_rolling").value || "0.0035") ||
+    0.0035;
+  const driveEff =
+    (parseFloat(
+      document.getElementById("driveTrainEfficiency").value || "98"
+    ) || 98) / 100;
 
-          const ftpAdv =
-            parseFloat(
-              document.getElementById("advanced_ftp").value ||
-                document.getElementById("known_ftp").value ||
-                "0"
-            ) || 0;
+  const ftpAdv =
+    parseFloat(
+      document.getElementById("advanced_ftp").value ||
+        document.getElementById("known_ftp").value ||
+        "0"
+    ) || 0;
 
-          const flatP =
-            parseFloat(
-              document.getElementById("flat_power").value || "0"
-            ) || 0;
-          const climb1P =
-            parseFloat(
-              document.getElementById("climb1_power").value || "0"
-            ) || 0;
-          const climb3P =
-            parseFloat(
-              document.getElementById("climb3_power").value || "0"
-            ) || 0;
-          const climb10P =
-            parseFloat(
-              document.getElementById("climb10_power").value || "0"
-            ) || 0;
+  const flatP =
+    parseFloat(document.getElementById("flat_power").value || "0") || 0;
+  const climb1P =
+    parseFloat(document.getElementById("climb1_power").value || "0") || 0;
+  const climb3P =
+    parseFloat(document.getElementById("climb3_power").value || "0") || 0;
+  const climb10P =
+    parseFloat(document.getElementById("climb10_power").value || "0") || 0;
 
-          if (flatP <= 0) {
-            container.innerHTML =
-              '<p style="margin:0;font-size:14px;color:#555;">Set at least a flat power in the advanced box above.</p>';
-            if (strategyRow) strategyRow.style.display = "flex";
-            if (strategyVal) strategyVal.textContent = "—";
-            return;
-          }
+  if (flatP <= 0) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Set at least a flat power in the advanced box above.</p>';
+    if (strategyRow) strategyRow.style.display = "flex";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
 
-          let maxDesc =
-            parseFloat(
-              document.getElementById("max_descent_speed").value || "0"
-            ) || 0;
-          let maxDesc_mps = Infinity;
-          if (maxDesc > 0) {
-            maxDesc_mps =
-              unit === "metric"
-                ? maxDesc / 3.6
-                : maxDesc * 0.44704;
-          }
+  let maxDesc =
+    parseFloat(document.getElementById("max_descent_speed").value || "0") || 0;
+  let maxDesc_mps = Infinity;
+  if (maxDesc > 0) {
+    maxDesc_mps = unit === "metric" ? maxDesc / 3.6 : maxDesc * 0.44704;
+  }
 
-          const targetSegLenKm = totalDistKm >= 120 ? 5 : 3;
-          const steepGrade = 0.08;
-          const minSteepLenKm = 0.7;
-          const segments = [];
-          let segStartIdx = 0;
-          let segStartDist = dist[0];
+  // segmentation – now on the smoothed profile
+  const targetSegLenKm = totalDistKm >= 120 ? 5 : 3;
+  const steepGrade = 0.08;
+  const minSteepLenKm = 0.7;
+  const segments = [];
+  let segStartIdx = 0;
+  let segStartDist = dist[0];
 
-          for (let i = 1; i < dist.length; i++) {
-            const dKmFromSegStart = dist[i] - segStartDist;
-            const stepKm = dist[i] - dist[i - 1];
-            const stepM = stepKm * 1000;
-            const stepElev = elev[i] - elev[i - 1];
-            const stepGrade = stepM > 0 ? stepElev / stepM : 0;
-            const isSteep =
-              Math.abs(stepGrade) >= steepGrade &&
-              stepKm >= minSteepLenKm;
-            const longEnough =
-              dKmFromSegStart >= targetSegLenKm && i > segStartIdx + 1;
+  for (let i = 1; i < dist.length; i++) {
+    const dKmFromSegStart = dist[i] - segStartDist;
+    const stepKm = dist[i] - dist[i - 1];
+    const stepM = stepKm * 1000;
+    const stepElev = elev[i] - elev[i - 1];
+    const stepGrade = stepM > 0 ? stepElev / stepM : 0;
+    const isSteep = Math.abs(stepGrade) >= steepGrade && stepKm >= minSteepLenKm;
+    const longEnough =
+      dKmFromSegStart >= targetSegLenKm && i > segStartIdx + 1;
 
-            if (isSteep) {
-              if (i - 1 > segStartIdx) {
-                segments.push({ start: segStartIdx, end: i - 1 });
-              }
-              segments.push({ start: i - 1, end: i });
-              segStartIdx = i;
-              segStartDist = dist[i];
-            } else if (longEnough) {
-              segments.push({ start: segStartIdx, end: i });
-              segStartIdx = i;
-              segStartDist = dist[i];
-            }
-          }
-          if (segStartIdx < dist.length - 1) {
-            segments.push({ start: segStartIdx, end: dist.length - 1 });
-          }
+    if (isSteep) {
+      if (i - 1 > segStartIdx) {
+        segments.push({ start: segStartIdx, end: i - 1 });
+      }
+      segments.push({ start: i - 1, end: i });
+      segStartIdx = i;
+      segStartDist = dist[i];
+    } else if (longEnough) {
+      segments.push({ start: segStartIdx, end: i });
+      segStartIdx = i;
+      segStartDist = dist[i];
+    }
+  }
+  if (segStartIdx < dist.length - 1) {
+    segments.push({ start: segStartIdx, end: dist.length - 1 });
+  }
 
-          let totalTimeSec = 0;
-          const rows = [];
+  let totalTimeSec = 0;
+  const rows = [];
 
-          for (let idx = 0; idx < segments.length; idx++) {
-            const s = segments[idx];
-            const dStart = dist[s.start];
-            const dEnd = dist[s.end];
-            const lenKm = Math.max(0.001, dEnd - dStart);
-            const lenM = lenKm * 1000;
+  for (let idx = 0; idx < segments.length; idx++) {
+    const s = segments[idx];
+    const dStart = dist[s.start];
+    const dEnd = dist[s.end];
+    const lenKm = Math.max(0.001, dEnd - dStart);
+    const lenM = lenKm * 1000;
 
-            const eStart = elev[s.start];
-            const eEnd = elev[s.end];
-            const grade = lenM > 0 ? (eEnd - eStart) / lenM : 0;
+    const eStart = elev[s.start];
+    const eEnd = elev[s.end];
+    const grade = lenM > 0 ? (eEnd - eStart) / lenM : 0;
 
-            let kind = "Flat/rolling";
-            if (grade >= 0.01) kind = "Climb";
-            else if (grade <= -0.01) kind = "Descent";
+    let kind = "Flat/rolling";
+    if (grade >= 0.01) kind = "Climb";
+    else if (grade <= -0.01) kind = "Descent";
 
-            let targetW = flatP;
+    let targetW = flatP;
 
-            if (kind === "Climb") {
-              const approxP = climb10P > 0 ? climb10P : flatP;
-              let vApprox = solveSpeedForTargetPower(
-                approxP,
-                grade,
-                totalWeight,
-                crr,
-                cda,
-                rho,
-                wind,
-                driveEff
-              );
-              if (vApprox <= 0) vApprox = 5;
-              const approxTimeSec = lenM / vApprox;
+    if (kind === "Climb") {
+      const approxP = climb10P > 0 ? climb10P : flatP;
+      let vApprox = solveSpeedForTargetPower(
+        approxP,
+        grade,
+        totalWeight,
+        crr,
+        cda,
+        rho,
+        wind,
+        driveEff
+      );
+      if (vApprox <= 0) vApprox = 5;
+      const approxTimeSec = lenM / vApprox;
 
-              if (approxTimeSec <= 60 && climb1P > 0) {
-                targetW = climb1P;
-              } else if (approxTimeSec <= 180 && climb3P > 0) {
-                targetW = climb3P;
-              } else if (climb10P > 0) {
-                targetW = climb10P;
-              } else {
-                targetW = flatP;
-              }
-            }
+      if (approxTimeSec <= 60 && climb1P > 0) {
+        targetW = climb1P;
+      } else if (approxTimeSec <= 180 && climb3P > 0) {
+        targetW = climb3P;
+      } else if (climb10P > 0) {
+        targetW = climb10P;
+      } else {
+        targetW = flatP;
+      }
+    }
 
-            let v = solveSpeedForTargetPower(
-              targetW,
-              grade,
-              totalWeight,
-              crr,
-              cda,
-              rho,
-              wind,
-              driveEff
-            );
-            if (kind === "Descent" && v > maxDesc_mps) {
-              v = maxDesc_mps;
-            }
-            if (v <= 0) continue;
+    let v = solveSpeedForTargetPower(
+      targetW,
+      grade,
+      totalWeight,
+      crr,
+      cda,
+      rho,
+      wind,
+      driveEff
+    );
+    if (kind === "Descent" && v > maxDesc_mps) {
+      v = maxDesc_mps;
+    }
+    if (v <= 0) continue;
 
-            const segTimeSec = lenM / v;
-            totalTimeSec += segTimeSec;
+    const segTimeSec = lenM / v;
+    totalTimeSec += segTimeSec;
 
-            const speedKmh = v * 3.6;
-            const speedDisplay =
-              unit === "metric"
-                ? speedKmh
-                : speedKmh / 1.60934;
-            const lenDisplay =
-              unit === "metric"
-                ? lenKm
-                : lenKm / 1.60934;
-            const startDisplay =
-              unit === "metric"
-                ? dStart
-                : dStart / 1.60934;
-            const endDisplay =
-              unit === "metric" ? dEnd : dEnd / 1.60934;
+    const speedKmh = v * 3.6;
+    const speedDisplay =
+      unit === "metric" ? speedKmh : speedKmh / 1.60934;
+    const lenDisplay = unit === "metric" ? lenKm : lenKm / 1.60934;
+    const startDisplay = unit === "metric" ? dStart : dStart / 1.60934;
+    const endDisplay = unit === "metric" ? dEnd : dEnd / 1.60934;
 
-            const gradePct = grade * 100;
+    const gradePct = grade * 100;
 
+    function fmtTime(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec - h * 3600) / 60);
+      const s2 = Math.round(sec - h * 3600 - m * 60);
+      const parts = [];
+      if (h > 0) parts.push(String(h).padStart(2, "0"));
+      parts.push(String(m).padStart(2, "0"));
+      parts.push(String(s2).padStart(2, "0"));
+      return parts.join(":");
+    }
+
+    rows.push({
+      from: startDisplay,
+      to: endDisplay,
+      len: lenDisplay,
+      kind,
+      grade: gradePct,
+      power: targetW,
+      speed: speedDisplay,
+      time: segTimeSec,
+      timeStr: fmtTime(segTimeSec),
+    });
+  }
+
+  if (!rows.length) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Route profile too short to build pacing segments.</p>';
+    if (strategyRow) strategyRow.style.display = "flex";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
+
+  const unitDistLabel = unit === "metric" ? "km" : "mi";
+  const unitSpeedLabel = unit === "metric" ? "km/h" : "mi/h";
+
+  let html =
+    '<table class="advTable"><thead><tr>' +
+    "<th>#</th><th>From (" +
+    unitDistLabel +
+    ")</th><th>To (" +
+    unitDistLabel +
+    ")</th>" +
+    "<th>Len (" +
+    unitDistLabel +
+    ')</th><th>Type</th><th>Grade (%)</th>' +
+    "<th>Power (W)</th><th>Speed (" +
+    unitSpeedLabel +
+    ")</th><th>Time</th></tr></thead><tbody>";
+
+  rows.forEach((r, i) => {
+    html +=
+      "<tr>" +
+      "<td>" +
+      (i + 1) +
+      "</td>" +
+      "<td>" +
+      r.from.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.to.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.len.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.kind +
+      "</td>" +
+      "<td>" +
+      r.grade.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.power.toFixed(0) +
+      "</td>" +
+      "<td>" +
+      r.speed.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.timeStr +
+      "</td>" +
+      "</tr>";
+  });
+
+  function fmtTotal(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec - h * 3600) / 60);
+    const s2 = Math.round(sec - h * 3600 - m * 60);
+    return (
+      String(h).padStart(2, "0") +
+      ":" +
+      String(m).padStart(2, "0") +
+      ":" +
+      String(s2).padStart(2, "0")
+    );
+  }
+
+  html += "</tbody></table>";
+  html +=
+    '<p class="advSummaryLine">Advanced pacing total time (sum of segments): <strong>' +
+    fmtTotal(totalTimeSec) +
+    "</strong></p>";
+
+  container.innerHTML = html;
+
+  if (strategyRow) strategyRow.style.display = "flex";
+  if (strategyVal) strategyVal.textContent = fmtTotal(totalTimeSec);
+}
             function fmtTime(sec) {
               const h = Math.floor(sec / 3600);
               const m = Math.floor((sec - h * 3600) / 60);
@@ -2106,250 +2161,261 @@ function convertLength(inp, unit, id) {
           return (θ + 360) % 360;
         }
 
-        function rebuildTechnicalChallenges() {
-          const container = document.getElementById("techChallenges");
-          if (!container) return;
+     function rebuildTechnicalChallenges() {
+  const container = document.getElementById("techChallenges");
+  if (!container) return;
 
-          const profile = window.currentRouteProfile;
-          if (
-            !profile ||
-            !profile.distances ||
-            !profile.elevations ||
-            !profile.latlngs
-          ) {
-            container.innerHTML =
-              '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
-            return;
-          }
+  // ***** USE SMOOTHED PROFILE IF AVAILABLE *****
+  const profile = window.currentRouteSmooth || window.currentRouteProfile;
+  if (
+    !profile ||
+    !profile.distances ||
+    !profile.elevations ||
+    !profile.latlngs
+  ) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
+    return;
+  }
 
-          const dist = profile.distances;
-          const elev = profile.elevations;
-          const latlngs = profile.latlngs;
-          const n = Math.min(
-            dist.length,
-            elev.length,
-            latlngs.length
-          );
-          if (n < 3) {
-            container.innerHTML =
-              '<p style="margin:0;font-size:13px;color:#92400e;">Route profile is too short to extract technical challenges.</p>';
-            return;
-          }
+  const dist = profile.distances;
+  const elev = profile.elevations;
+  const latlngs = profile.latlngs;
+  const n = Math.min(dist.length, elev.length, latlngs.length);
+  if (n < 3) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">Route profile is too short to extract technical challenges.</p>';
+    return;
+  }
 
-          const unit = document.getElementById("unit").value;
-          const distFactor = unit === "metric" ? 1 : 1 / 1.60934;
-          const distLabel = unit === "metric" ? "km" : "mi";
+  const unit = document.getElementById("unit").value;
+  const distFactor = unit === "metric" ? 1 : 1 / 1.60934;
+  const distLabel = unit === "metric" ? "km" : "mi";
 
-          const gradeThreshold = 0.03;
+  const gradeThreshold = 0.03;
+  const minSegLenKm = 0.2; // ignore micro-climbs/descents
 
-          const climbSegments = [];
-          const descSegments = [];
+  const climbSegments = [];
+  const descSegments = [];
 
-          let currentType = null;
-          let segStartIdx = 0;
+  let currentType = null;
+  let segStartIdx = 0;
 
-          for (let i = 1; i < n; i++) {
-            const stepKm = dist[i] - dist[i - 1];
-            const stepM = stepKm * 1000;
-            if (stepM <= 0) continue;
-            const dElev = elev[i] - elev[i - 1];
-            const g = dElev / stepM;
+  for (let i = 1; i < n; i++) {
+    const stepKm = dist[i] - dist[i - 1];
+    const stepM = stepKm * 1000;
+    if (stepM <= 0) continue;
+    const dElev = elev[i] - elev[i - 1];
+    const g = dElev / stepM;
 
-            let type = null;
-            if (g >= gradeThreshold) type = "climb";
-            else if (g <= -gradeThreshold) type = "descent";
+    let type = null;
+    if (g >= gradeThreshold) type = "climb";
+    else if (g <= -gradeThreshold) type = "descent";
 
-            if (type === currentType) {
-              continue;
-            } else {
-              if (currentType && i - 1 > segStartIdx) {
-                const startIdx = segStartIdx;
-                const endIdx = i - 1;
-                const dStartKm = dist[startIdx];
-                const dEndKm = dist[endIdx];
-                const lenKm = Math.max(0, dEndKm - dStartKm);
-                const dElevSeg = elev[endIdx] - elev[startIdx];
-                const avgGrade =
-                  lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
-                const segObj = {
-                  startIdx,
-                  endIdx,
-                  startKm: dStartKm,
-                  endKm: dEndKm,
-                  lenKm,
-                  avgGrade,
-                };
-                if (currentType === "climb") climbSegments.push(segObj);
-                else if (currentType === "descent")
-                  descSegments.push(segObj);
-              }
-              if (type) {
-                segStartIdx = i - 1;
-                currentType = type;
-              } else {
-                currentType = null;
-              }
-            }
-          }
-          if (currentType && segStartIdx < n - 1) {
-            const startIdx = segStartIdx;
-            const endIdx = n - 1;
-            const dStartKm = dist[startIdx];
-            const dEndKm = dist[endIdx];
-            const lenKm = Math.max(0, dEndKm - dStartKm);
-            const dElevSeg = elev[endIdx] - elev[startIdx];
-            const avgGrade =
-              lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
-            const segObj = {
-              startIdx,
-              endIdx,
-              startKm: dStartKm,
-              endKm: dEndKm,
-              lenKm,
-              avgGrade,
-            };
-            if (currentType === "climb") climbSegments.push(segObj);
-            else if (currentType === "descent") descSegments.push(segObj);
-          }
-
-          const sharpTurns = [];
-          const angleThresh = 80;
-
-          for (let i = 1; i < n - 1; i++) {
-            const [lat0, lon0] = latlngs[i - 1];
-            const [lat1, lon1] = latlngs[i];
-            const [lat2, lon2] = latlngs[i + 1];
-            const b1 = bearingDeg(lat0, lon0, lat1, lon1);
-            const b2 = bearingDeg(lat1, lon1, lat2, lon2);
-            let delta = Math.abs(b2 - b1);
-            if (delta > 180) delta = 360 - delta;
-            if (delta > angleThresh) {
-              sharpTurns.push({
-                idx: i,
-                km: dist[i],
-                angle: delta,
-              });
-            }
-          }
-
-          if (
-            !climbSegments.length &&
-            !descSegments.length &&
-            !sharpTurns.length
-          ) {
-            container.innerHTML =
-              '<p style="margin:0;font-size:13px;color:#92400e;">No climbs ≥ 3%, descents ≤ −3%, or turns &gt; 80° found on this route.</p>';
-            return;
-          }
-
-          let html = "";
-
-          if (climbSegments.length) {
-            html += "<h4>Climbs ≥ 3% grade</h4>";
-            html +=
-              '<table class="techTable"><thead><tr>' +
-              "<th>#</th><th>From (" +
-              distLabel +
-              ")</th><th>To (" +
-              distLabel +
-              ")</th><th>Distance (" +
-              distLabel +
-              ")</th><th>Avg grade (%)</th>" +
-              "</tr></thead><tbody>";
-            climbSegments.forEach((s, idx) => {
-              const from = s.startKm * distFactor;
-              const to = s.endKm * distFactor;
-              const len = s.lenKm * distFactor;
-              const avgGradePct = s.avgGrade * 100;
-              html +=
-                "<tr>" +
-                "<td>" +
-                (idx + 1) +
-                "</td>" +
-                "<td>" +
-                from.toFixed(2) +
-                "</td>" +
-                "<td>" +
-                to.toFixed(2) +
-                "</td>" +
-                "<td>" +
-                len.toFixed(2) +
-                "</td>" +
-                "<td>" +
-                avgGradePct.toFixed(1) +
-                "</td>" +
-                "</tr>";
-            });
-            html += "</tbody></table>";
-          }
-
-          if (descSegments.length) {
-            html += "<h4>Descents ≤ −3% grade</h4>";
-            html +=
-              '<table class="techTable"><thead><tr>' +
-              "<th>#</th><th>From (" +
-              distLabel +
-              ")</th><th>To (" +
-              distLabel +
-              ")</th><th>Distance (" +
-              distLabel +
-              ")</th><th>Avg grade (%)</th>" +
-              "</tr></thead><tbody>";
-            descSegments.forEach((s, idx) => {
-              const from = s.startKm * distFactor;
-              const to = s.endKm * distFactor;
-              const len = s.lenKm * distFactor;
-              const avgGradePct = s.avgGrade * 100;
-              html +=
-                "<tr>" +
-                "<td>" +
-                (idx + 1) +
-                "</td>" +
-                "<td>" +
-                from.toFixed(2) +
-                "</td>" +
-                "<td>" +
-                to.toFixed(2) +
-                "</td>" +
-                "<td>" +
-                len.toFixed(2) +
-                "</td>" +
-                "<td>" +
-                avgGradePct.toFixed(1) +
-                "</td>" +
-                "</tr>";
-            });
-            html += "</tbody></table>";
-          }
-
-          if (sharpTurns.length) {
-            html += "<h4>Sharp turns (&gt; 80°)</h4>";
-            html +=
-              '<table class="techTable"><thead><tr>' +
-              "<th>#</th><th>At (" +
-              distLabel +
-              ")</th><th>Turn angle (°)</th>" +
-              "</tr></thead><tbody>";
-            sharpTurns.forEach((t, idx) => {
-              const d = t.km * distFactor;
-              html +=
-                "<tr>" +
-                "<td>" +
-                (idx + 1) +
-                "</td>" +
-                "<td>" +
-                d.toFixed(2) +
-                "</td>" +
-                "<td>" +
-                t.angle.toFixed(1) +
-                "</td>" +
-                "</tr>";
-            });
-            html += "</tbody></table>";
-          }
-
-          container.innerHTML = html;
+    if (type === currentType) {
+      continue;
+    } else {
+      if (currentType && i - 1 > segStartIdx) {
+        const startIdx = segStartIdx;
+        const endIdx = i - 1;
+        const dStartKm = dist[startIdx];
+        const dEndKm = dist[endIdx];
+        const lenKm = Math.max(0, dEndKm - dStartKm);
+        if (lenKm >= minSegLenKm) {
+          const dElevSeg = elev[endIdx] - elev[startIdx];
+          const avgGrade = lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
+          const segObj = {
+            startIdx,
+            endIdx,
+            startKm: dStartKm,
+            endKm: dEndKm,
+            lenKm,
+            avgGrade,
+          };
+          if (currentType === "climb") climbSegments.push(segObj);
+          else if (currentType === "descent") descSegments.push(segObj);
         }
+      }
+      if (type) {
+        segStartIdx = i - 1;
+        currentType = type;
+      } else {
+        currentType = null;
+      }
+    }
+  }
+  if (currentType && segStartIdx < n - 1) {
+    const startIdx = segStartIdx;
+    const endIdx = n - 1;
+    const dStartKm = dist[startIdx];
+    const dEndKm = dist[endIdx];
+    const lenKm = Math.max(0, dEndKm - dStartKm);
+    if (lenKm >= minSegLenKm) {
+      const dElevSeg = elev[endIdx] - elev[startIdx];
+      const avgGrade = lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
+      const segObj = {
+        startIdx,
+        endIdx,
+        startKm: dStartKm,
+        endKm: dEndKm,
+        lenKm,
+        avgGrade,
+      };
+      if (currentType === "climb") climbSegments.push(segObj);
+      else if (currentType === "descent") descSegments.push(segObj);
+    }
+  }
+
+  // ---- Sharp turns, clustered ----
+  const sharpTurns = [];
+  const angleThresh = 80;
+
+  for (let i = 1; i < n - 1; i++) {
+    const [lat0, lon0] = latlngs[i - 1];
+    const [lat1, lon1] = latlngs[i];
+    const [lat2, lon2] = latlngs[i + 1];
+    const b1 = bearingDeg(lat0, lon0, lat1, lon1);
+    const b2 = bearingDeg(lat1, lon1, lat2, lon2);
+    let delta = Math.abs(b2 - b1);
+    if (delta > 180) delta = 360 - delta;
+    if (delta > angleThresh) {
+      sharpTurns.push({
+        idx: i,
+        km: dist[i],
+        angle: delta,
+      });
+    }
+  }
+
+  // cluster turns <150 m apart into one
+  const clusteredTurns = [];
+  const minTurnGapKm = 0.15;
+  sharpTurns.sort((a, b) => a.km - b.km);
+  let lastKm = -Infinity;
+  for (const t of sharpTurns) {
+    if (t.km - lastKm >= minTurnGapKm) {
+      clusteredTurns.push({ ...t });
+      lastKm = t.km;
+    } else if (clusteredTurns.length) {
+      const last = clusteredTurns[clusteredTurns.length - 1];
+      if (t.angle > last.angle) last.angle = t.angle;
+    }
+  }
+
+  if (!climbSegments.length && !descSegments.length && !clusteredTurns.length) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">No climbs ≥ 3%, descents ≤ −3%, or turns &gt; 80° found on this route.</p>';
+    return;
+  }
+
+  let html = "";
+
+  if (climbSegments.length) {
+    html += "<h4>Climbs ≥ 3% grade</h4>";
+    html +=
+      '<table class="techTable"><thead><tr>' +
+      "<th>#</th><th>From (" +
+      distLabel +
+      ")</th><th>To (" +
+      distLabel +
+      ")</th><th>Distance (" +
+      distLabel +
+      ")</th><th>Avg grade (%)</th>" +
+      "</tr></thead><tbody>";
+    climbSegments.forEach((s, idx) => {
+      const from = s.startKm * distFactor;
+      const to = s.endKm * distFactor;
+      const len = s.lenKm * distFactor;
+      const avgGradePct = s.avgGrade * 100;
+      html +=
+        "<tr>" +
+        "<td>" +
+        (idx + 1) +
+        "</td>" +
+        "<td>" +
+        from.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        to.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        len.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        avgGradePct.toFixed(1) +
+        "</td>" +
+        "</tr>";
+    });
+    html += "</tbody></table>";
+  }
+
+  if (descSegments.length) {
+    html += "<h4>Descents ≤ −3% grade</h4>";
+    html +=
+      '<table class="techTable"><thead><tr>' +
+      "<th>#</th><th>From (" +
+      distLabel +
+      ")</th><th>To (" +
+      distLabel +
+      ")</th><th>Distance (" +
+      distLabel +
+      ")</th><th>Avg grade (%)</th>" +
+      "</tr></thead><tbody>";
+    descSegments.forEach((s, idx) => {
+      const from = s.startKm * distFactor;
+      const to = s.endKm * distFactor;
+      const len = s.lenKm * distFactor;
+      const avgGradePct = s.avgGrade * 100;
+      html +=
+        "<tr>" +
+        "<td>" +
+        (idx + 1) +
+        "</td>" +
+        "<td>" +
+        from.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        to.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        len.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        avgGradePct.toFixed(1) +
+        "</td>" +
+        "</tr>";
+    });
+    html += "</tbody></table>";
+  }
+
+  if (clusteredTurns.length) {
+    html += "<h4>Sharp turns (&gt; 80°)</h4>";
+    html +=
+      '<table class="techTable"><thead><tr>' +
+      "<th>#</th><th>At (" +
+      distLabel +
+      ")</th><th>Turn angle (°)</th>" +
+      "</tr></thead><tbody>";
+    clusteredTurns.forEach((t, idx) => {
+      const d = t.km * distFactor;
+      html +=
+        "<tr>" +
+        "<td>" +
+        (idx + 1) +
+        "</td>" +
+        "<td>" +
+        d.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        t.angle.toFixed(1) +
+        "</td>" +
+        "</tr>";
+    });
+    html += "</tbody></table>";
+  }
+
+  container.innerHTML = html;
+}
 
         /* ------------- main physics result --------------- */
 
@@ -2819,7 +2885,25 @@ if (lastKey && ROUTE_INDEX[lastKey]) {
             localStorage.removeItem("bikesim_last_route");
           }
         });
+const toggleCourseBtn = document.getElementById("toggleCourseAnalysis");
+const courseAnalysisEl = document.getElementById("courseAnalysis");
 
+if (toggleCourseBtn && courseAnalysisEl) {
+  toggleCourseBtn.addEventListener("click", () => {
+    const hidden = courseAnalysisEl.classList.toggle("courseAnalysis--hidden");
+    toggleCourseBtn.textContent = hidden
+      ? "Show course analysis"
+      : "Hide course analysis";
+
+    // when opening, make sure everything is refreshed
+    if (!hidden) {
+      const u = document.getElementById("unit").value || "metric";
+      updateChartUnits(u);
+      rebuildTechnicalChallenges();
+      rebuildAdvancedPacing();
+    }
+  });
+}
         /* ---- Normalisation helpers for route JSON ---- */
 
         function haversineMeters(lat1, lon1, lat2, lon2) {
