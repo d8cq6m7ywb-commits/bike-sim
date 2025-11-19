@@ -1,0 +1,2788 @@
+(function () {
+  const root = document.getElementById("yousuli-calc-root");
+  if (!root) return;
+
+  root.innerHTML = `
+    <div class="wrapper__calc">
+      <header class="header__calc">
+        <h1 class="heading__primary--calc">Bike Power Speed Calculator</h1>
+      </header>
+
+      <!-- Route selector -->
+      <div class="route__selector">
+        <label for="routeSearch">Search race:</label>
+        <input
+          id="routeSearch"
+          type="text"
+          placeholder="Type part of race name..."
+        />
+        <label for="routeSelect">Route:</label>
+        <select id="routeSelect">
+          <option value="">— No route selected —</option>
+        </select>
+        <button id="resetRouteBtn" type="button">Reset</button>
+        <div class="route__meta" id="routeMeta">
+          No route selected. You can still enter distance, climb, and altitude
+          manually.
+        </div>
+      </div>
+
+      <!-- Calculation mode -->
+      <div class="calcMode__wrapper">
+        <div class="calcMode__box">
+          <div class="row__calc">
+            <label class="label__calc">Calculation mode</label>
+            <div class="combined__calc">
+              <select
+                id="calcMode"
+                class="input__calc"
+                onchange="updateCalcModeUI(); calculateResult();"
+              >
+                <option value="power_to_time" selected>
+                  Given average power → estimate finish time
+                </option>
+                <option value="time_to_power">
+                  Given finish time → estimate average power
+                </option>
+                <option value="strategy_power">
+                  Power strategy (advanced) → estimate finish time
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="calcMode__inputs">
+            <div class="row__calc" id="row_target_power">
+              <label class="label__calc">Target average power</label>
+              <div class="combined__calc">
+                <input
+                  type="number"
+                  id="target_power"
+                  class="input__calc"
+                  value="220"
+                  onchange="calculateResult()"
+                />
+                <span class="unit__calc">W</span>
+              </div>
+            </div>
+            <div class="row__calc" id="row_finish_time">
+              <label class="label__calc">Finish time</label>
+              <div class="combined__calc--time">
+                <input
+                  type="number"
+                  id="hh"
+                  class="input__calc"
+                  value="00"
+                  placeholder="HH"
+                  onchange="calculateResult()"
+                />
+                <span class="unit__calc--colon">:</span>
+                <input
+                  type="number"
+                  id="mm"
+                  class="input__calc"
+                  value="37"
+                  placeholder="MM"
+                  onchange="calculateResult()"
+                />
+                <span class="unit__calc--colon">:</span>
+                <input
+                  type="number"
+                  id="ss"
+                  class="input__calc"
+                  value="00"
+                  placeholder="SS"
+                  onchange="calculateResult()"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced power strategy -->
+      <div id="advancedWrapper" class="advanced__wrapper" style="display: none">
+        <div class="advanced__header">
+          <div class="label__calc">Power strategy (advanced mode)</div>
+          <div class="advanced__note">
+            Uses the loaded course profile to estimate segment-by-segment pacing
+            with different powers for short / medium / long climbs and a max
+            descending speed.
+          </div>
+        </div>
+        <div id="advancedFields" class="advanced__fields">
+          <div class="row__calc">
+            <label class="label__calc">FTP / CP</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="advanced_ftp"
+                class="input__calc"
+                value="320"
+                onchange="syncFtpFromAdvanced(); calculateResult();"
+              />
+              <span class="unit__calc">W</span>
+            </div>
+          </div>
+          <div class="row__calc">
+            <label class="label__calc">Flat power</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="flat_power"
+                class="input__calc"
+                value="240"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">W</span>
+            </div>
+          </div>
+          <div class="row__calc">
+            <label class="label__calc">Climb &lt; 1 min power</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="climb1_power"
+                class="input__calc"
+                value="280"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">W</span>
+            </div>
+          </div>
+          <div class="row__calc">
+            <label class="label__calc">Climb &lt; 3 min power</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="climb3_power"
+                class="input__calc"
+                value="270"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">W</span>
+            </div>
+          </div>
+          <div class="row__calc">
+            <label class="label__calc">Climb &lt; 10 min power</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="climb10_power"
+                class="input__calc"
+                value="260"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">W</span>
+            </div>
+          </div>
+          <div class="row__calc">
+            <label class="label__calc">Max descending speed</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="max_descent_speed"
+                class="input__calc"
+                value="85"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc" id="max_descent_unit">km/h</span>
+            </div>
+            <div class="notes">
+              Caps speed on descents in the advanced pacing table.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col__calc">
+        <!-- Column 1 -->
+        <div class="input__box--calc">
+          <div class="row__calc">
+            <label class="label__calc">Unit choice</label>
+            <div class="combined__calc">
+              <select id="unit" class="input__calc" onchange="changeUnit()">
+                <option value="metric" selected>Metric</option>
+                <option value="imperial">Imperial</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row__calc metric__row">
+            <label class="label__calc">Rider weight</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="rider-weight-kg"
+                class="input__calc"
+                value="40"
+                onchange="convertWeight(this,'lb','rider-weight');calculateResult()"
+              />
+              <span class="unit__calc">kg</span>
+            </div>
+          </div>
+          <div class="row__calc imperial__row">
+            <label class="label__calc">Rider weight</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="rider-weight-lb"
+                class="input__calc"
+                value="88.18"
+                onchange="convertWeight(this,'kg','rider-weight');calculateResult()"
+              />
+              <span class="unit__calc">lb</span>
+            </div>
+          </div>
+
+          <div class="row__calc metric__row">
+            <label class="label__calc">Clothes & gear</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="clothes-gear-kg"
+                class="input__calc"
+                value="1.5"
+                onchange="convertWeight(this,'lb','clothes-gear');calculateResult()"
+              />
+              <span class="unit__calc">kg</span>
+            </div>
+          </div>
+          <div class="row__calc imperial__row">
+            <label class="label__calc">Clothes & gear</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="clothes-gear-lb"
+                class="input__calc"
+                value="3.31"
+                onchange="convertWeight(this,'kg','clothes-gear');calculateResult()"
+              />
+              <span class="unit__calc">lb</span>
+            </div>
+          </div>
+
+          <div class="row__calc metric__row">
+            <label class="label__calc">Bike weight</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="bike-weight-kg"
+                class="input__calc"
+                value="6.8"
+                onchange="convertWeight(this,'lb','bike-weight');calculateResult()"
+              />
+              <span class="unit__calc">kg</span>
+            </div>
+          </div>
+          <div class="row__calc imperial__row">
+            <label class="label__calc">Bike weight</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="bike-weight-lb"
+                class="input__calc"
+                value="15.0"
+                onchange="convertWeight(this,'kg','bike-weight');calculateResult()"
+              />
+              <span class="unit__calc">lb</span>
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Drive train efficiency (%)</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="driveTrainEfficiency"
+                class="input__calc"
+                value="98"
+                min="80"
+                max="100"
+                onchange="calculateResult()"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="input__box--calc">
+          <div class="row__calc">
+            <label class="label__calc">Tyre Condition (Crr)</label>
+            <div class="combined__calc">
+              <select
+                id="tyreCondition"
+                class="input__calc"
+                onchange="changeTyreCondition()"
+              >
+                <option value="0.007">Off-road (0.007)</option>
+                <option value="0.006">Poor / Budget (0.006)</option>
+                <option value="0.0035" selected>Average (0.0035)</option>
+                <option value="0.0030">Good perf (0.0030)</option>
+                <option value="0.0023">Premium (0.0023)</option>
+                <option value="0.0018">Velodrome (0.0018)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row__calc">
+            <label class="label__calc">Crr override</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="crr_rolling"
+                class="input__calc"
+                value="0.0035"
+                step="0.0001"
+                onchange="calculateResult()"
+              />
+            </div>
+          </div>
+
+          <div class="row__calc metric__row">
+            <label class="label__calc">Distance</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="distance-km"
+                class="input__calc"
+                value="13.1"
+                onchange="convertDistance(this,'mi','distance');calculateResult()"
+              />
+              <span class="unit__calc">km</span>
+            </div>
+          </div>
+          <div class="row__calc imperial__row">
+            <label class="label__calc">Distance</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="distance-mi"
+                class="input__calc"
+                value="8.14"
+                onchange="convertDistance(this,'km','distance');calculateResult()"
+              />
+              <span class="unit__calc">mi</span>
+            </div>
+          </div>
+
+          <div class="row__calc metric__row">
+            <label class="label__calc">Total climb</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="total-climb-m"
+                class="input__calc"
+                value="1118"
+                onchange="convertLength(this,'ft','total-climb');calculateResult()"
+              />
+              <span class="unit__calc">m</span>
+            </div>
+          </div>
+          <div class="row__calc imperial__row">
+            <label class="label__calc">Total climb</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="total-climb-ft"
+                class="input__calc"
+                value="3668.4"
+                onchange="convertLength(this,'m','total-climb');calculateResult()"
+              />
+              <span class="unit__calc">ft</span>
+            </div>
+          </div>
+
+          <div class="row__calc metric__row">
+            <label class="label__calc">Temperature</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="temperature-c"
+                class="input__calc"
+                value="20"
+                onchange="convertTemperature(this,'f','temperature');calculateResult()"
+              />
+              <span class="unit__calc">°C</span>
+            </div>
+          </div>
+          <div class="row__calc imperial__row">
+            <label class="label__calc">Temperature</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="temperature-f"
+                class="input__calc"
+                value="68"
+                onchange="convertTemperature(this,'c','temperature');calculateResult()"
+              />
+              <span class="unit__calc">°F</span>
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Relative Humidity</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="relHumidity"
+                class="input__calc"
+                value="0"
+                min="0"
+                max="100"
+                step="1"
+                onchange="calculateResult()"
+              />
+              <span class="unit__calc">%</span>
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Altitude</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="altitude"
+                class="input__calc"
+                value="100"
+                onchange="calculateResult()"
+              />
+              <span class="unit__calc">m</span>
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Air pressure override (optional)</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="pressure-hpa"
+                class="input__calc"
+                placeholder="e.g. 1013.25"
+              />
+              <span class="unit__calc">hPa</span>
+            </div>
+            <div class="notes">
+              Leave blank to use standard atmosphere at the given altitude.
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Wind (± km/h or mi/h)</label>
+            <div class="combined__calc metric__row">
+              <input
+                type="number"
+                id="wind-metric"
+                class="input__calc"
+                value="0"
+                min="-50"
+                max="50"
+                onchange="calculateResult()"
+              />
+              <span class="unit__calc">km/h</span>
+            </div>
+            <div class="combined__calc imperial__row">
+              <input
+                type="number"
+                id="wind-imperial"
+                class="input__calc"
+                value="0"
+                min="-31"
+                max="31"
+                onchange="calculateResult()"
+              />
+              <span class="unit__calc">mi/h</span>
+            </div>
+            <div class="notes">
+              Positive = headwind. Negative = tailwind. Uses relative airspeed.
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 3 -->
+        <div class="input__box--calc">
+          <div class="row__calc">
+            <label class="label__calc">Position</label>
+            <div class="combined__calc">
+              <select
+                id="position"
+                class="input__calc"
+                onchange="changePosition()"
+              >
+                <option value="0.18" selected>Aerobars pro</option>
+                <option value="0.20">Aerobars elite</option>
+                <option value="0.25">Aerobars advanced</option>
+                <option value="0.37">Aerobars novice</option>
+                <option value="0.40">Drops</option>
+                <option value="0.42">Hoods</option>
+                <option value="0.45">Tops</option>
+                <option value="0.50">Standing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Cda override</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="cdaAeroDynamicResistance"
+                class="input__calc"
+                value="0.18"
+                step="0.01"
+                onchange="calculateResult()"
+              />
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Fitness</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="fitnessValue"
+                class="input__calc"
+                value="30"
+                min="1"
+                onchange="calculateResult()"
+              />
+            </div>
+            <div class="notes">
+              Used only for the rough “workout” label below.
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Known FTP/CP</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="known_ftp"
+                class="input__calc"
+                value="320"
+                onchange="syncAdvancedFromFtp(); calculateResult()"
+              />
+              <span class="unit__calc">W</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results & Course Analysis -->
+      <div class="postcalc-wrapper">
+        <div class="output__container--calc">
+          <h3 class="heading__tertiary--calc">Results</h3>
+          <div class="row__res--calc">
+            <span class="res__label">Finish time (physics)</span>
+            <span class="res__value" id="finishTimePhysics">—</span>
+          </div>
+          <div
+            class="row__res--calc"
+            id="finishTimeStrategyRow"
+            style="display: none"
+          >
+            <span class="res__label">Finish time (strategy)</span>
+            <span class="res__value" id="finishTimeStrategy">—</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Intensity Factor</span>
+            <span class="res__value" id="intensity">0.00 IF</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Stress Score (avg-power proxy)</span>
+            <span class="res__value" id="stressScore">0.00</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Workout</span>
+            <span class="res__value" id="workoutDesc">Easy workout</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Avg W (physics est. / input)</span>
+            <span class="res__value" id="avg_w">0.00 W</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Avg W/kg (body mass)</span>
+            <span class="res__value" id="avg_w_kg">0.00 W/kg</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Speed</span>
+            <span class="res__value" id="speed">0.00 km/h</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Slope Grade</span>
+            <span class="res__value" id="slopeGrade">0.0000 %</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Air density used</span>
+            <span class="res__value" id="rhoUsed">— kg/m³</span>
+          </div>
+          <div class="row__res--calc">
+            <span class="res__label">Pressure used</span>
+            <span class="res__value" id="pressureUsed">— hPa</span>
+          </div>
+        </div>
+
+        <div class="notes">
+          <strong>Notes:</strong> Air density is computed from standard
+          atmosphere (altitude) plus temperature and relative humidity (Tetens
+          saturation vapor pressure → partial pressures). Rolling resistance
+          uses the normal force on a grade (× cos θ). Headwind positive, tailwind
+          negative; drag depends on relative airspeed.
+        </div>
+
+        <button id="toggleCourseAnalysis" class="courseToggleBtn">
+          Show course analysis
+        </button>
+
+        <div id="courseAnalysis" class="courseAnalysis courseAnalysis--hidden">
+          <!-- Map + Elevation -->
+          <div class="route__visuals">
+            <div id="map"></div>
+            <div id="chart-wrapper">
+              <canvas id="elevChart"></canvas>
+              <div class="meta-bottom">
+                When you choose a race above, the bike course will be drawn here
+                with its elevation profile. You can override any
+                distance/climb/altitude fields manually afterwards.
+              </div>
+            </div>
+          </div>
+
+          <section class="advancedPacing__section">
+            <h3 class="heading__tertiary--calc">Advanced pacing (beta)</h3>
+            <div id="advancedPacing" class="advanced-pacing-placeholder">
+              Advanced pacing will appear here when you select “Power strategy
+              (advanced)” and a route.
+            </div>
+          </section>
+
+          <section class="techChallenges__section">
+            <h3>Technical challenges</h3>
+            <div id="techChallenges">
+              <p style="margin: 0; font-size: 13px; color: #92400e">
+                Select a route above to list climbs ≥ 3%, descents ≤ −3%, and
+                sharp turns (&gt; 80°).
+              </p>
+            </div>
+            <div class="techNote">
+              Thresholds: segments are grouped by continuous grade ≥ 3% (climbs)
+              or ≤ −3% (descents). Sharp turns are heading changes &gt; 80°.
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  `;
+})();
+
+/* ------------ Route index (dropdown options) ------------- */
+const ROUTE_INDEX = {
+  /* ---------- Challenge full & 70.3 ---------- */
+  Alpe_d_Huez: {
+    name: "Alpe d Huez",
+    file: "routes/Alpe_d_Huez.json",
+    tempC: 17,
+  },
+  challenge_israman: {
+    name: "Challenge Israman",
+    file: "routes/Challenge_Israman.json",
+    tempC: 20,
+  },
+  challenge_roth: {
+    name: "Challenge Roth",
+    file: "routes/Challenge_Roth.json",
+    tempC: 21,
+  },
+  challenge703_israman: {
+    name: "Challenge70.3 Israman",
+    file: "routes/Challenge70.3_Israman.json",
+    tempC: 18,
+  },
+  challenge703_oman: {
+    name: "Challenge70.3 Oman",
+    file: "routes/Challenge70.3_Oman.json",
+    tempC: 20,
+  },
+  challenge703_rio: {
+    name: "Challenge70.3 Rio de Janeiro",
+    file: "routes/Challenge70.3_Rio_de_Janeiro.json",
+    tempC: 19,
+  },
+  challenge703_sir_bani_yas: {
+    name: "Challenge70.3 Sir Bani Yas",
+    file: "routes/Challenge70.3_Sir_Bani_Yas.json",
+    tempC: 24,
+  },
+  challenge703_Xiamen: {
+    name: "Challenge70.3 Xiamen",
+    file: "routes/Challenge70.3_Xiamen.json",
+    tempC: 25,
+  },
+
+  /* ---------- IM 70.3 ---------- */
+  im703_alcudia_mallorca: {
+    name: "IM703 Alcudia Mallorca",
+    file: "routes/IM70.3_Alcudia_Mallorca.json",
+    tempC: 18,
+  },
+  /*the line below was having issues*/
+  im703_cascais: {
+    name: "IM703 Cascais",
+    file: "routes/IM70.3_Cascais.json",
+    tempC: 19,
+  },
+  im703_coeur_d_alene: {
+    name: "IM703 Coeur d'Alene",
+    file: "routes/IM70.3_Coeur_d_Alene.json",
+    tempC: 20,
+  },
+  im703_cozumel: {
+    name: "IM703 Cozumel",
+    file: "routes/IM70.3_Cozumel.json",
+    tempC: 28,
+  },
+  im703_da_nang: {
+    name: "IM703 Danang",
+    file: "routes/IM70.3_Danang.json",
+    tempC: 30,
+  },
+  im703_desaru_coast: {
+    name: "IM703 Desaru Coast",
+    file: "routes/IM70.3_Desaru_Coast.json",
+    tempC: 27,
+  },
+  im703_florida: {
+    name: "IM703 Florida",
+    file: "routes/IM70.3_Florida.json",
+    tempC: 20,
+  },
+  im703_geelong: {
+    name: "IM703 Geelong",
+    file: "routes/IM70.3_Geelong.json",
+    tempC: 19,
+  },
+  im703_goseong: {
+    name: "IM703 Goseong",
+    file: "routes/IM70.3_Goseong.json",
+    tempC: 22,
+  },
+  im703_hawaii: {
+    name: "IM703 Hawaii",
+    file: "routes/IM70.3_Hawaii.json",
+    tempC: 26,
+  },
+  im703_knokke_heist: {
+    name: "IM703 Knokke-Heist",
+    file: "routes/IM70.3_Knokke_Heist.json",
+    tempC: 16,
+  },
+  im703_kraichgau: {
+    name: "IM703 Kraichgau",
+    file: "routes/IM70.3_Kraichgau.json",
+    tempC: 18,
+  },
+  im703_la_quinta: {
+    name: "IM703 La Quinta",
+    file: "routes/IM70.3_La_Quinta.json",
+    tempC: 14,
+  },
+  im703_maine: {
+    name: "IM703 Maine",
+    file: "routes/IM70.3_Maine.json",
+    tempC: 23,
+  },
+  im703_musselman: {
+    name: "IM703 Musselman",
+    file: "routes/IM70.3_Musselman.json",
+    tempC: 22,
+  },
+  im703_new_york: {
+    name: "IM703 New York",
+    file: "routes/IM70.3_New_York.json",
+    tempC: 18,
+  },
+  im703_new_zealand: {
+    name: "IM703 New Zealand",
+    file: "routes/IM70.3_New_Zealand.json",
+    tempC: 16,
+  },
+  im703_nice: {
+    name: "IM703 Nice",
+    file: "routes/IM70.3_Nice.json",
+    tempC: 21,
+  },
+  im703_north_carolina: {
+    name: "IM703 North Carolina",
+    file: "routes/IM70.3_North_Carolina.json",
+    tempC: 14,
+  },
+  im703_northern_california: {
+    name: "IM703 Northern California",
+    file: "routes/IM70.3_Northern_California.json",
+    tempC: 26,
+  },
+  im703_oceanside: {
+    name: "IM703 Oceanside",
+    file: "routes/IM70.3_OceanSide.json",
+    tempC: 14,
+  },
+  im703_peru: {
+    name: "IM703 Peru",
+    file: "routes/IM70.3_Peru.json",
+    tempC: 23,
+  },
+  im703_porec: {
+    name: "IM703 Porec",
+    file: "routes/IM70.3_Porec.json",
+    tempC: 22,
+  },
+  im703_port_macquarie: {
+    name: "IM703 Port Macquarie",
+    file: "routes/IM70.3_Port_Macquarie.json",
+    tempC: 17,
+  },
+  im703_puerto_rico: {
+    name: "IM703 Puerto Rico",
+    file: "routes/IM70.3_Puerto_Rico.json",
+    tempC: 26,
+  },
+  im703_salem_oregon: {
+    name: "IM703 Salem Oregon",
+    file: "routes/IM70.3_Salem_Oregon.json",
+    tempC: 24,
+  },
+  im703_sables_d_olonne: {
+    name: "IM703 Les Sables d’Olonne",
+    file: "routes/IM70.3_Sables_d_Olonne.json",
+    tempC: 18,
+  },
+  im703_shanghai: {
+    name: "IM703 Shanghai",
+    file: "routes/IM70.3_Shanghai.json",
+    tempC: 20,
+  },
+  im703_sunshine_coast: {
+    name: "IM703 Sunshine Coast",
+    file: "routes/IM70.3_Sunshine_Coast.json",
+    tempC: 18,
+  },
+  im703_switzerland: {
+    name: "IM703 Switzerland",
+    file: "routes/IM70.3_Switzerland.json",
+    tempC: 18,
+  },
+  im703_tallinn: {
+    name: "IM703 Tallinn",
+    file: "routes/IM70.3_Tallinn.json",
+    tempC: 15,
+  },
+  im703_texas_galveston: {
+    name: "IM703 Texas Galveston",
+    file: "routes/IM70.3_Texas_Galveston.json",
+    tempC: 21,
+  },
+  im703_valencia: {
+    name: "IM703 Valencia",
+    file: "routes/IM70.3_Valencia.json",
+    tempC: 16,
+  },
+  im703_victoria_canada: {
+    name: "IM703 Victoria Canada",
+    file: "routes/IM70.3_Victoria_Canada.json",
+    tempC: 9,
+  },
+  im703_vichy: {
+    name: "IM703 Vichy",
+    file: "routes/IM70.3_Vichy.json",
+    tempC: 22,
+  },
+  im703_washington_tricities: {
+    name: "IM703 Washington Tri-Cities",
+    file: "routes/IM70.3_Washington_Tricities.json",
+    tempC: 16,
+  },
+  im703_western_massachusetts: {
+    name: "IM703 Western Massachusetts",
+    file: "routes/IM70.3_Western_Massachusetts.json",
+    tempC: 19,
+  },
+  im703_western_sydney: {
+    name: "IM703 Western Sydney",
+    file: "routes/IM70.3_Western_Sydney.json",
+    tempC: 16,
+  },
+  im703_zell_am_see_kaprun: {
+    name: "IM703 Zell am See-Kaprun",
+    file: "routes/IM70.3_Zell_am_see_Kaprun.json",
+    tempC: 20,
+  },
+
+  /* ---------- IM full distance ---------- */
+  im_arizona: {
+    name: "IM Arizona",
+    file: "routes/IM_Arizona.json",
+    tempC: 16,
+  },
+  im_australia: {
+    name: "IM Australia",
+    file: "routes/IM_Australia.json",
+    tempC: 17,
+  },
+  im_barcelona: {
+    name: "IM Barcelona",
+    file: "routes/IM_Barcelona.json",
+    tempC: 20,
+  },
+  im_brazil: {
+    name: "IM Brazil",
+    file: "routes/IM_Brazil.json",
+    tempC: 18,
+  },
+  im_cairns: {
+    name: "IM Cairns",
+    file: "routes/IM_Cairns.json",
+    tempC: 21,
+  },
+  im_california: {
+    name: "IM California",
+    file: "routes/IM_California.json",
+    tempC: 18,
+  },
+  im_cascais: {
+    name: "IM Cascais",
+    file: "routes/IM_Cascais.json",
+    tempC: 20,
+  },
+  im_cozumel: {
+    name: "IM Cozumel",
+    file: "routes/IM_Cozumel.json",
+    tempC: 24,
+  },
+  im_danang: {
+    name: "IM Danang",
+    file: "routes/IM_Danang.json",
+    tempC: 30,
+  },
+  im_florida: {
+    name: "IM Florida",
+    file: "routes/IM_Florida.json",
+    tempC: 19,
+  },
+  im_frankfurt: {
+    name: "IM Frankfurt",
+    file: "routes/IM_Frankfurt.json",
+    tempC: 23,
+  },
+  im_hamburg: {
+    name: "IM Hamburg 2025",
+    file: "routes/IM_Hamburg.json",
+    tempC: 17,
+  },
+  im_kalmar: {
+    name: "IM Kalmar",
+    file: "routes/IM_Kalmar.json",
+    tempC: 18,
+  },
+  im_kona: {
+    name: "IM World Championship Kona",
+    file: "routes/IM_Kona.json",
+    tempC: 28,
+  },
+  im_lake_placid: {
+    name: "IM Lake Placid",
+    file: "routes/IM_Lake_Placid.json",
+    tempC: 18,
+  },
+  im_lanzarote: {
+    name: "IM Lanzarote",
+    file: "routes/IM_Lanzarote.json",
+    tempC: 22,
+  },
+  im_maryland: {
+    name: "IM Maryland",
+    file: "routes/IM_Maryland.json",
+    tempC: 20,
+  },
+  im_new_zealand: {
+    name: "IM New Zealand",
+    file: "routes/IM_New_Zealand.json",
+    tempC: 14,
+  },
+  im_nice: {
+    name: "IM Nice",
+    file: "routes/IM_Nice.json",
+    tempC: 26,
+  },
+  im_ottawa: {
+    name: "IM Ottawa",
+    file: "routes/IM_Ottawa.json",
+    tempC: 22,
+  },
+  im_penghu: {
+    name: "IM Penghu",
+    file: "routes/IM_Penghu.json",
+    tempC: 27,
+  },
+  im_philippines: {
+    name: "IM Philippines",
+    file: "routes/IM_Philippines.json",
+    tempC: 28,
+  },
+  im_sables_d_olonne: {
+    name: "IM Les Sables d’Olonne",
+    file: "routes/IM_Sables_d_Olonne.json",
+    tempC: 16,
+  },
+  im_san_juan: {
+    name: "IM San Juan",
+    file: "routes/IM_San_juan.json",
+    tempC: 13,
+  },
+  im_south_africa: {
+    name: "IM South Africa",
+    file: "routes/IM_South_Africa.json",
+    tempC: 19,
+  },
+  im_tallinn: {
+    name: "IM Tallinn",
+    file: "routes/IM_Tallinn.json",
+    tempC: 16,
+  },
+  im_texas: {
+    name: "IM Texas",
+    file: "routes/IM_Texas.json",
+    tempC: 27,
+  },
+  im_valdivia: {
+    name: "IM Valdivia",
+    file: "routes/IM_Valdivia.json",
+    tempC: 14,
+  },
+  im_vittoria_gasteiz: {
+    name: "IM Vittoria-Gasteiz",
+    file: "routes/IM_Vittoria_Gasteiz.json",
+    tempC: 18,
+  },
+  im_wales: {
+    name: "IM Wales",
+    file: "routes/IM_Wales.json",
+    tempC: 14,
+  },
+  im_western_australia: {
+    name: "IM Western Australia",
+    file: "routes/IM_Western_Australia.json",
+    tempC: 19,
+  },
+  im_wisconsin: {
+    name: "IM Wisconsin",
+    file: "routes/IM_Wisconsin.json",
+    tempC: 18,
+  },
+
+  stc_dishuihu: {
+    name: "STC Dishuihu",
+    file: "routes/STC70.3_Dishuihu.json",
+    tempC: 17,
+  },
+  stc_qiandaohu: {
+    name: "STC Qiandaohu",
+    file: "routes/STC70.3_Qiandaohu.json",
+    tempC: 22,
+  },
+  t100_french_riviera: {
+    name: "T100 French Riviera",
+    file: "routes/T100_French_Riviera.json",
+    tempC: 26,
+  },
+  t100_french_singapore: {
+    name: "T100 Singapore",
+    file: "routes/T100_Singapore.json",
+    tempC: 30,
+  },
+  taiwan_king_of_the_mountain: {
+    name: "Taiwan KOM",
+    file: "routes/Taiwan_King_of_the_Mountain.json",
+    tempC: 7,
+  },
+  Ventoux: {
+    name: "Ventoux",
+    file: "routes/Ventoux.json",
+    tempC: 20,
+  },
+  Xtri_Norseman: {
+    name: "Xtri Norseman",
+    file: "routes/Xtri_Norseman.json",
+    tempC: 18,
+  },
+  Xtri_Pantagoniaman: {
+    name: "Xtri Pantagoniaman",
+    file: "routes/Xtri_Pantagoniaman.json",
+    tempC: 15,
+  },
+};
+
+console.log("ROUTE_INDEX keys:", Object.keys(ROUTE_INDEX).length);
+
+/* -------- input helpers & physics ---------- */
+
+function changeTyreCondition() {
+  document.getElementById("crr_rolling").value =
+    document.getElementById("tyreCondition").value;
+  calculateResult();
+}
+
+function changePosition() {
+  document.getElementById("cdaAeroDynamicResistance").value =
+    document.getElementById("position").value;
+  calculateResult();
+}
+
+function changeUnit() {
+  const u = document.getElementById("unit").value;
+  document
+    .querySelectorAll(".metric__row")
+    .forEach((el) => (el.style.display = u === "metric" ? "flex" : "none"));
+  document
+    .querySelectorAll(".imperial__row")
+    .forEach((el) => (el.style.display = u === "imperial" ? "flex" : "none"));
+
+  const maxDescUnit = document.getElementById("max_descent_unit");
+  if (maxDescUnit) {
+    maxDescUnit.textContent = u === "metric" ? "km/h" : "mi/h";
+  }
+
+  calculateResult();
+  if (typeof updateChartUnits === "function") {
+    updateChartUnits(u);
+  }
+  if (typeof rebuildTechnicalChallenges === "function") {
+    rebuildTechnicalChallenges();
+  }
+}
+
+function convertWeight(inp, unit, id) {
+  let v = parseFloat(inp.value) || 0;
+  const tgt = document.getElementById(id + "-" + unit);
+  if (!tgt) return;
+
+  tgt.value =
+    unit === "kg"
+      ? (v / 2.20462).toFixed(2) // input is lb -> convert to kg
+      : (v * 2.20462).toFixed(2); // input is kg -> convert to lb
+}
+
+function convertDistance(inp, unit, id) {
+  let v = parseFloat(inp.value) || 0;
+  const tgt = document.getElementById(id + "-" + unit);
+  if (!tgt) return;
+
+  tgt.value =
+    unit === "km"
+      ? (v * 1.60934).toFixed(2) // input is mi -> km
+      : (v / 1.60934).toFixed(2); // input is km -> mi
+}
+
+function convertLength(inp, unit, id) {
+  let v = parseFloat(inp.value) || 0;
+  const t = document.getElementById(id + "-" + unit);
+  if (!t) return;
+
+  t.value =
+    unit === "m"
+      ? (v / 3.28084).toFixed(2) // input is ft -> m
+      : (v * 3.28084).toFixed(2); // input is m -> ft
+}
+
+function convertTemperature(inp, unit, id) {
+  let v = parseFloat(inp.value) || 0,
+    t = document.getElementById(id + "-" + unit);
+  if (!t) return;
+  t.value =
+    unit === "c"
+      ? (((v - 32) * 5) / 9).toFixed(2)
+      : ((v * 9) / 5 + 32).toFixed(2);
+}
+
+function pressureAtAltitude(altMeters, pOverride_hPa) {
+  if (pOverride_hPa && pOverride_hPa > 0) return pOverride_hPa * 100.0;
+  const P0 = 101325.0,
+    T0 = 288.15,
+    g = 9.80665,
+    L = 0.0065,
+    R = 8.314462618,
+    M = 0.0289644;
+  const factor = 1 - (L * altMeters) / T0;
+  return P0 * Math.pow(factor, (g * M) / (R * L));
+}
+
+function saturationVaporPressure_Pa(tempC) {
+  return 610.78 * Math.exp((17.27 * tempC) / (tempC + 237.3));
+}
+
+function moistAirDensity(pressurePa, tempC, RHpercent) {
+  const T = tempC + 273.15;
+  const es = saturationVaporPressure_Pa(tempC);
+  const e =
+    Math.max(0, Math.min(pressurePa * 0.99, es)) *
+    (Math.max(0, Math.min(100, RHpercent)) / 100);
+  const pd = Math.max(1, pressurePa - e);
+  const Rd = 287.05,
+    Rv = 461.495;
+  return pd / (Rd * T) + e / (Rv * T);
+}
+
+function formatTimeFromHours(timeH) {
+  const totalSeconds = Math.max(0, timeH * 3600);
+  let hh = Math.floor(totalSeconds / 3600);
+  let mm = Math.floor((totalSeconds - hh * 3600) / 60);
+  let ss = Math.round(totalSeconds - hh * 3600 - mm * 60);
+  if (ss === 60) {
+    ss = 0;
+    mm += 1;
+  }
+  if (mm === 60) {
+    mm = 0;
+    hh += 1;
+  }
+  return (
+    String(hh).padStart(2, "0") +
+    ":" +
+    String(mm).padStart(2, "0") +
+    ":" +
+    String(ss).padStart(2, "0")
+  );
+}
+
+function updateCalcModeUI() {
+  const mode = document.getElementById("calcMode").value;
+  const rowPower = document.getElementById("row_target_power");
+  const rowTime = document.getElementById("row_finish_time");
+  const advWrap = document.getElementById("advancedWrapper");
+  const stratRow = document.getElementById("finishTimeStrategyRow");
+
+  if (mode === "power_to_time") {
+    if (rowPower) rowPower.style.display = "flex";
+    if (rowTime) rowTime.style.display = "flex";
+    if (advWrap) advWrap.style.display = "none";
+    if (stratRow) stratRow.style.display = "none";
+  } else if (mode === "time_to_power") {
+    if (rowPower) rowPower.style.display = "none";
+    if (rowTime) rowTime.style.display = "flex";
+    if (advWrap) advWrap.style.display = "none";
+    if (stratRow) stratRow.style.display = "none";
+  } else if (mode === "strategy_power") {
+    if (rowPower) rowPower.style.display = "none";
+    if (rowTime) rowTime.style.display = "none";
+    if (advWrap) advWrap.style.display = "block";
+    if (stratRow) stratRow.style.display = "flex";
+  }
+}
+
+function syncFtpFromAdvanced() {
+  const advVal =
+    parseFloat(document.getElementById("advanced_ftp").value || "0") || 0;
+  const ftpField = document.getElementById("known_ftp");
+  if (ftpField && advVal > 0) {
+    ftpField.value = advVal;
+  }
+}
+
+function syncAdvancedFromFtp() {
+  const baseVal =
+    parseFloat(document.getElementById("known_ftp").value || "0") || 0;
+  const advField = document.getElementById("advanced_ftp");
+  if (advField && baseVal > 0) {
+    advField.value = baseVal;
+  }
+}
+
+function segmentPowerForSpeed(
+  v,
+  grade,
+  totalWeight,
+  crr,
+  cda,
+  rho,
+  wind,
+  driveEff
+) {
+  const g = 9.80665;
+  const sinTheta = grade / Math.sqrt(1 + grade * grade);
+  const cosTheta = 1 / Math.sqrt(1 + grade * grade);
+  const vAir = v + wind;
+  const vAirAbs = Math.abs(vAir);
+  const powerAero = 0.5 * rho * cda * vAirAbs * vAirAbs * v;
+  const powerRoll = g * totalWeight * crr * cosTheta * v;
+  const powerClimb = g * totalWeight * sinTheta * v;
+  const wheelPower = Math.max(0, powerAero + powerRoll + powerClimb);
+  return wheelPower / Math.max(0.01, driveEff);
+}
+
+function solveSpeedForTargetPower(
+  targetW,
+  grade,
+  totalWeight,
+  crr,
+  cda,
+  rho,
+  wind,
+  driveEff
+) {
+  if (targetW <= 0) return 0;
+  let vLow = 0.5;
+  let vHigh = 25.0;
+  for (let i = 0; i < 32; i++) {
+    const vMid = 0.5 * (vLow + vHigh);
+    const pMid = segmentPowerForSpeed(
+      vMid,
+      grade,
+      totalWeight,
+      crr,
+      cda,
+      rho,
+      wind,
+      driveEff
+    );
+    if (pMid > targetW) vHigh = vMid;
+    else vLow = vMid;
+  }
+  return vLow;
+}
+
+function rebuildAdvancedPacing() {
+  const container = document.getElementById("advancedPacing");
+  const mode = document.getElementById("calcMode").value;
+  const strategyRow = document.getElementById("finishTimeStrategyRow");
+  const strategyVal = document.getElementById("finishTimeStrategy");
+
+  if (!container) return;
+
+  if (mode !== "strategy_power") {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Select “Power strategy (advanced)” to see per-segment pacing.</p>';
+    if (strategyRow) strategyRow.style.display = "none";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
+
+  const profile = window.currentRouteSmooth || window.currentRouteProfile;
+  if (!profile || !profile.distances || profile.distances.length < 2) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Advanced pacing needs a selected course with elevation data.</p>';
+    if (strategyRow) strategyRow.style.display = "flex";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
+
+  const dist = profile.distances;
+  const elev = profile.elevations;
+  const totalDistKm = dist[dist.length - 1];
+
+  const unit = document.getElementById("unit").value;
+  let wind =
+    unit === "metric"
+      ? parseFloat(document.getElementById("wind-metric").value || "0")
+      : parseFloat(document.getElementById("wind-imperial").value || "0");
+  wind = unit === "metric" ? wind / 3.6 : wind * 0.44704;
+
+  const tempC =
+    parseFloat(document.getElementById("temperature-c").value || "0") || 0;
+  const alt =
+    parseFloat(document.getElementById("altitude").value || "0") || 0;
+  const RH =
+    parseFloat(document.getElementById("relHumidity").value || "0") || 0;
+  const pOverride_hPa =
+    parseFloat(document.getElementById("pressure-hpa").value || "0") || 0;
+
+  const pressurePa = pressureAtAltitude(alt, pOverride_hPa);
+  const rho = moistAirDensity(pressurePa, tempC, RH);
+
+  const rw =
+    parseFloat(document.getElementById("rider-weight-kg").value || "0") || 0;
+  const cg =
+    parseFloat(document.getElementById("clothes-gear-kg").value || "0") || 0;
+  const bw =
+    parseFloat(document.getElementById("bike-weight-kg").value || "0") || 0;
+  const totalWeight = rw + cg + bw;
+
+  const cda =
+    parseFloat(
+      document.getElementById("cdaAeroDynamicResistance").value || "0.18"
+    ) || 0.18;
+  const crr =
+    parseFloat(document.getElementById("crr_rolling").value || "0.0035") ||
+    0.0035;
+  const driveEff =
+    (parseFloat(
+      document.getElementById("driveTrainEfficiency").value || "98"
+    ) || 98) / 100;
+
+  const ftpAdv =
+    parseFloat(
+      document.getElementById("advanced_ftp").value ||
+        document.getElementById("known_ftp").value ||
+        "0"
+    ) || 0;
+
+  const flatP =
+    parseFloat(document.getElementById("flat_power").value || "0") || 0;
+  const climb1P =
+    parseFloat(document.getElementById("climb1_power").value || "0") || 0;
+  const climb3P =
+    parseFloat(document.getElementById("climb3_power").value || "0") || 0;
+  const climb10P =
+    parseFloat(document.getElementById("climb10_power").value || "0") || 0;
+
+  if (flatP <= 0) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Set at least a flat power in the advanced box above.</p>';
+    if (strategyRow) strategyRow.style.display = "flex";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
+
+  let maxDesc =
+    parseFloat(document.getElementById("max_descent_speed").value || "0") || 0;
+  let maxDesc_mps = Infinity;
+  if (maxDesc > 0) {
+    maxDesc_mps = unit === "metric" ? maxDesc / 3.6 : maxDesc * 0.44704;
+  }
+
+  const targetSegLenKm = totalDistKm >= 120 ? 5 : 3;
+  const steepGrade = 0.08;
+  const minSteepLenKm = 0.7;
+  const segments = [];
+  let segStartIdx = 0;
+  let segStartDist = dist[0];
+
+  for (let i = 1; i < dist.length; i++) {
+    const dKmFromSegStart = dist[i] - segStartDist;
+    const stepKm = dist[i] - dist[i - 1];
+    const stepM = stepKm * 1000;
+    const stepElev = elev[i] - elev[i - 1];
+    const stepGrade = stepM > 0 ? stepElev / stepM : 0;
+    const isSteep = Math.abs(stepGrade) >= steepGrade && stepKm >= minSteepLenKm;
+    const longEnough = dKmFromSegStart >= targetSegLenKm && i > segStartIdx + 1;
+
+    if (isSteep) {
+      if (i - 1 > segStartIdx) {
+        segments.push({ start: segStartIdx, end: i - 1 });
+      }
+      segments.push({ start: i - 1, end: i });
+      segStartIdx = i;
+      segStartDist = dist[i];
+    } else if (longEnough) {
+      segments.push({ start: segStartIdx, end: i });
+      segStartIdx = i;
+      segStartDist = dist[i];
+    }
+  }
+
+  if (segStartIdx < dist.length - 1) {
+    segments.push({ start: segStartIdx, end: dist.length - 1 });
+  }
+
+  let totalTimeSec = 0;
+  const rows = [];
+
+  for (let idx = 0; idx < segments.length; idx++) {
+    const s = segments[idx];
+    const dStart = dist[s.start];
+    const dEnd = dist[s.end];
+    const lenKm = Math.max(0.001, dEnd - dStart);
+    const lenM = lenKm * 1000;
+
+    const eStart = elev[s.start];
+    const eEnd = elev[s.end];
+    const grade = lenM > 0 ? (eEnd - eStart) / lenM : 0;
+
+    let kind = "Flat/rolling";
+    if (grade >= 0.01) kind = "Climb";
+    else if (grade <= -0.01) kind = "Descent";
+
+    let targetW = flatP;
+
+    if (kind === "Climb") {
+      const approxP = climb10P > 0 ? climb10P : flatP;
+      let vApprox = solveSpeedForTargetPower(
+        approxP,
+        grade,
+        totalWeight,
+        crr,
+        cda,
+        rho,
+        wind,
+        driveEff
+      );
+      if (vApprox <= 0) vApprox = 5;
+      const approxTimeSec = lenM / vApprox;
+
+      if (approxTimeSec <= 60 && climb1P > 0) {
+        targetW = climb1P;
+      } else if (approxTimeSec <= 180 && climb3P > 0) {
+        targetW = climb3P;
+      } else if (climb10P > 0) {
+        targetW = climb10P;
+      } else {
+        targetW = flatP;
+      }
+    }
+
+    let v = solveSpeedForTargetPower(
+      targetW,
+      grade,
+      totalWeight,
+      crr,
+      cda,
+      rho,
+      wind,
+      driveEff
+    );
+    if (kind === "Descent" && v > maxDesc_mps) {
+      v = maxDesc_mps;
+    }
+    if (v <= 0) continue;
+
+    const segTimeSec = lenM / v;
+    totalTimeSec += segTimeSec;
+
+    const speedKmh = v * 3.6;
+    const speedDisplay = unit === "metric" ? speedKmh : speedKmh / 1.60934;
+    const lenDisplay = unit === "metric" ? lenKm : lenKm / 1.60934;
+    const startDisplay = unit === "metric" ? dStart : dStart / 1.60934;
+    const endDisplay = unit === "metric" ? dEnd : dEnd / 1.60934;
+
+    const gradePct = grade * 100;
+
+    function fmtTime(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec - h * 3600) / 60);
+      const s2 = Math.round(sec - h * 3600 - m * 60);
+      const parts = [];
+      if (h > 0) parts.push(String(h).padStart(2, "0"));
+      parts.push(String(m).padStart(2, "0"));
+      parts.push(String(s2).padStart(2, "0"));
+      return parts.join(":");
+    }
+
+    rows.push({
+      from: startDisplay,
+      to: endDisplay,
+      len: lenDisplay,
+      kind,
+      grade: gradePct,
+      power: targetW,
+      speed: speedDisplay,
+      time: segTimeSec,
+      timeStr: fmtTime(segTimeSec),
+    });
+  }
+
+  if (!rows.length) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:14px;color:#555;">Route profile too short to build pacing segments.</p>';
+    if (strategyRow) strategyRow.style.display = "flex";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
+  }
+
+  const unitDistLabel = unit === "metric" ? "km" : "mi";
+  const unitSpeedLabel = unit === "metric" ? "km/h" : "mi/h";
+
+  let html =
+    '<table class="advTable"><thead><tr>' +
+    "<th>#</th><th>From (" +
+    unitDistLabel +
+    ")</th><th>To (" +
+    unitDistLabel +
+    ")</th>" +
+    "<th>Len (" +
+    unitDistLabel +
+    ')</th><th>Type</th><th>Grade (%)</th>' +
+    "<th>Power (W)</th><th>Speed (" +
+    unitSpeedLabel +
+    ")</th><th>Time</th></tr></thead><tbody>";
+
+  rows.forEach((r, i) => {
+    html +=
+      "<tr>" +
+      "<td>" +
+      (i + 1) +
+      "</td>" +
+      "<td>" +
+      r.from.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.to.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.len.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.kind +
+      "</td>" +
+      "<td>" +
+      r.grade.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.power.toFixed(0) +
+      "</td>" +
+      "<td>" +
+      r.speed.toFixed(1) +
+      "</td>" +
+      "<td>" +
+      r.timeStr +
+      "</td>" +
+      "</tr>";
+  });
+
+  function fmtTotal(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec - h * 3600) / 60);
+    const s2 = Math.round(sec - h * 3600 - m * 60);
+    return (
+      String(h).padStart(2, "0") +
+      ":" +
+      String(m).padStart(2, "0") +
+      ":" +
+      String(s2).padStart(2, "0")
+    );
+  }
+
+  html += "</tbody></table>";
+  html +=
+    '<p class="advSummaryLine">Advanced pacing total time (sum of segments): <strong>' +
+    fmtTotal(totalTimeSec) +
+    "</strong></p>";
+
+  container.innerHTML = html;
+
+  if (strategyRow) strategyRow.style.display = "flex";
+  if (strategyVal) strategyVal.textContent = fmtTotal(totalTimeSec);
+}
+
+/* --- Technical challenges --- */
+
+function bearingDeg(lat1, lon1, lat2, lon2) {
+  const toRad = (x) => (x * Math.PI) / 180;
+  const toDeg = (x) => (x * 180) / Math.PI;
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δλ = toRad(lon2 - lon1);
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x =
+    Math.cos(φ1) * Math.sin(φ2) -
+    Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  let θ = Math.atan2(y, x);
+  θ = toDeg(θ);
+  return (θ + 360) % 360;
+}
+
+function rebuildTechnicalChallenges() {
+  const container = document.getElementById("techChallenges");
+  if (!container) return;
+
+  const profile = window.currentRouteSmooth || window.currentRouteProfile;
+  if (
+    !profile ||
+    !profile.distances ||
+    !profile.elevations ||
+    !profile.latlngs
+  ) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
+    return;
+  }
+
+  const dist = profile.distances;
+  const elev = profile.elevations;
+  const latlngs = profile.latlngs;
+  const n = Math.min(dist.length, elev.length, latlngs.length);
+  if (n < 3) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">Route profile is too short to extract technical challenges.</p>';
+    return;
+  }
+
+  const unit = document.getElementById("unit").value;
+  const distFactor = unit === "metric" ? 1 : 1 / 1.60934;
+  const distLabel = unit === "metric" ? "km" : "mi";
+
+  const gradeThreshold = 0.03;
+  const minSegLenKm = 0.2;
+
+  const climbSegments = [];
+  const descSegments = [];
+
+  let currentType = null;
+  let segStartIdx = 0;
+
+  for (let i = 1; i < n; i++) {
+    const stepKm = dist[i] - dist[i - 1];
+    const stepM = stepKm * 1000;
+    if (stepM <= 0) continue;
+    const dElev = elev[i] - elev[i - 1];
+    const g = dElev / stepM;
+
+    let type = null;
+    if (g >= gradeThreshold) type = "climb";
+    else if (g <= -gradeThreshold) type = "descent";
+
+    if (type === currentType) {
+      continue;
+    } else {
+      if (currentType && i - 1 > segStartIdx) {
+        const startIdx = segStartIdx;
+        const endIdx = i - 1;
+        const dStartKm = dist[startIdx];
+        const dEndKm = dist[endIdx];
+        const lenKm = Math.max(0, dEndKm - dStartKm);
+        if (lenKm >= minSegLenKm) {
+          const dElevSeg = elev[endIdx] - elev[startIdx];
+          const avgGrade = lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
+          const segObj = {
+            startIdx,
+            endIdx,
+            startKm: dStartKm,
+            endKm: dEndKm,
+            lenKm,
+            avgGrade,
+          };
+          if (currentType === "climb") climbSegments.push(segObj);
+          else if (currentType === "descent") descSegments.push(segObj);
+        }
+      }
+      if (type) {
+        segStartIdx = i - 1;
+        currentType = type;
+      } else {
+        currentType = null;
+      }
+    }
+  }
+
+  if (currentType && segStartIdx < n - 1) {
+    const startIdx = segStartIdx;
+    const endIdx = n - 1;
+    const dStartKm = dist[startIdx];
+    const dEndKm = dist[endIdx];
+    const lenKm = Math.max(0, dEndKm - dStartKm);
+    if (lenKm >= minSegLenKm) {
+      const dElevSeg = elev[endIdx] - elev[startIdx];
+      const avgGrade = lenKm > 0 ? dElevSeg / (lenKm * 1000) : 0;
+      const segObj = {
+        startIdx,
+        endIdx,
+        startKm: dStartKm,
+        endKm: dEndKm,
+        lenKm,
+        avgGrade,
+      };
+      if (currentType === "climb") climbSegments.push(segObj);
+      else if (currentType === "descent") descSegments.push(segObj);
+    }
+  }
+
+  const sharpTurns = [];
+  const angleThresh = 80;
+
+  for (let i = 1; i < n - 1; i++) {
+    const [lat0, lon0] = latlngs[i - 1];
+    const [lat1, lon1] = latlngs[i];
+    const [lat2, lon2] = latlngs[i + 1];
+    const b1 = bearingDeg(lat0, lon0, lat1, lon1);
+    const b2 = bearingDeg(lat1, lon1, lat2, lon2);
+    let delta = Math.abs(b2 - b1);
+    if (delta > 180) delta = 360 - delta;
+    if (delta > angleThresh) {
+      sharpTurns.push({
+        idx: i,
+        km: dist[i],
+        angle: delta,
+      });
+    }
+  }
+
+  const clusteredTurns = [];
+  const minTurnGapKm = 0.15;
+  sharpTurns.sort((a, b) => a.km - b.km);
+  let lastKm = -Infinity;
+  for (const t of sharpTurns) {
+    if (t.km - lastKm >= minTurnGapKm) {
+      clusteredTurns.push({ ...t });
+      lastKm = t.km;
+    } else if (clusteredTurns.length) {
+      const last = clusteredTurns[clusteredTurns.length - 1];
+      if (t.angle > last.angle) last.angle = t.angle;
+    }
+  }
+
+  if (!climbSegments.length && !descSegments.length && !clusteredTurns.length) {
+    container.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">No climbs ≥ 3%, descents ≤ −3%, or turns &gt; 80° found on this route.</p>';
+    return;
+  }
+
+  let html = "";
+
+  if (climbSegments.length) {
+    html += "<h4>Climbs ≥ 3% grade</h4>";
+    html +=
+      '<table class="techTable"><thead><tr>' +
+      "<th>#</th><th>From (" +
+      distLabel +
+      ")</th><th>To (" +
+      distLabel +
+      ")</th><th>Distance (" +
+      distLabel +
+      ")</th><th>Avg grade (%)</th>" +
+      "</tr></thead><tbody>";
+    climbSegments.forEach((s, idx) => {
+      const from = s.startKm * distFactor;
+      const to = s.endKm * distFactor;
+      const len = s.lenKm * distFactor;
+      const avgGradePct = s.avgGrade * 100;
+      html +=
+        "<tr>" +
+        "<td>" +
+        (idx + 1) +
+        "</td>" +
+        "<td>" +
+        from.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        to.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        len.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        avgGradePct.toFixed(1) +
+        "</td>" +
+        "</tr>";
+    });
+    html += "</tbody></table>";
+  }
+
+  if (descSegments.length) {
+    html += "<h4>Descents ≤ −3% grade</h4>";
+    html +=
+      '<table class="techTable"><thead><tr>' +
+      "<th>#</th><th>From (" +
+      distLabel +
+      ")</th><th>To (" +
+      distLabel +
+      ")</th><th>Distance (" +
+      distLabel +
+      ")</th><th>Avg grade (%)</th>" +
+      "</tr></thead><tbody>";
+    descSegments.forEach((s, idx) => {
+      const from = s.startKm * distFactor;
+      const to = s.endKm * distFactor;
+      const len = s.lenKm * distFactor;
+      const avgGradePct = s.avgGrade * 100;
+      html +=
+        "<tr>" +
+        "<td>" +
+        (idx + 1) +
+        "</td>" +
+        "<td>" +
+        from.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        to.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        len.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        avgGradePct.toFixed(1) +
+        "</td>" +
+        "</tr>";
+    });
+    html += "</tbody></table>";
+  }
+
+  if (clusteredTurns.length) {
+    html += "<h4>Sharp turns (&gt; 80°)</h4>";
+    html +=
+      '<table class="techTable"><thead><tr>' +
+      "<th>#</th><th>At (" +
+      distLabel +
+      ")</th><th>Turn angle (°)</th>" +
+      "</tr></thead><tbody>";
+    clusteredTurns.forEach((t, idx) => {
+      const d = t.km * distFactor;
+      html +=
+        "<tr>" +
+        "<td>" +
+        (idx + 1) +
+        "</td>" +
+        "<td>" +
+        d.toFixed(2) +
+        "</td>" +
+        "<td>" +
+        t.angle.toFixed(1) +
+        "</td>" +
+        "</tr>";
+    });
+    html += "</tbody></table>";
+  }
+
+  container.innerHTML = html;
+}
+
+/* ------------- main physics result --------------- */
+
+function calculateResult() {
+  const rw =
+    parseFloat(document.getElementById("rider-weight-kg").value || 0) || 0;
+  const cg =
+    parseFloat(document.getElementById("clothes-gear-kg").value || 0) || 0;
+  const bw =
+    parseFloat(document.getElementById("bike-weight-kg").value || 0) || 0;
+  const totalWeight = rw + cg + bw;
+
+  const distKm =
+    parseFloat(document.getElementById("distance-km").value || 0) || 0;
+  const climbM =
+    parseFloat(document.getElementById("total-climb-m").value || 0) || 0;
+
+  const unit = document.getElementById("unit").value;
+  let wind =
+    unit === "metric"
+      ? parseFloat(document.getElementById("wind-metric").value || 0)
+      : parseFloat(document.getElementById("wind-imperial").value || 0);
+  wind = unit === "metric" ? wind / 3.6 : wind * 0.44704;
+  const tempC =
+    parseFloat(document.getElementById("temperature-c").value || 0) || 0;
+  const alt =
+    parseFloat(document.getElementById("altitude").value || 0) || 0;
+  const RH =
+    parseFloat(document.getElementById("relHumidity").value || 0) || 0;
+  const pOverride_hPa =
+    parseFloat(document.getElementById("pressure-hpa").value || 0) || 0;
+
+  const pressurePa = pressureAtAltitude(alt, pOverride_hPa);
+  const rho = moistAirDensity(pressurePa, tempC, RH);
+
+  const cda =
+    parseFloat(
+      document.getElementById("cdaAeroDynamicResistance").value
+    ) || 0.18;
+  const crr =
+    parseFloat(document.getElementById("crr_rolling").value) || 0.0035;
+  const g = 9.80665;
+  const driveEff =
+    (parseFloat(document.getElementById("driveTrainEfficiency").value) ||
+      98) / 100;
+
+  const grade = distKm > 0 ? climbM / (distKm * 1000) : 0;
+  const sinTheta = grade / Math.sqrt(1 + grade * grade);
+  const cosTheta = 1 / Math.sqrt(1 + grade * grade);
+
+  function powerForSpeed(v) {
+    const vAir = v + wind;
+    const vAirAbs = Math.abs(vAir);
+    const powerAero = 0.5 * rho * cda * vAirAbs * vAirAbs * v;
+    const powerRoll = g * totalWeight * crr * cosTheta * v;
+    const powerClimb = g * totalWeight * sinTheta * v;
+    const wheelPower = Math.max(0, powerAero + powerRoll + powerClimb);
+    return wheelPower / Math.max(0.01, driveEff);
+  }
+
+  const calcMode = document.getElementById("calcMode").value;
+  let avgW = 0;
+  let v = 0;
+  let timeH = 1 / 3600;
+
+  if (calcMode === "power_to_time") {
+    const targetP =
+      parseFloat(document.getElementById("target_power").value || 0) || 0;
+    if (targetP > 0) {
+      let vLow = 0.1;
+      let vHigh = 30.0;
+
+      for (let i = 0; i < 40; i++) {
+        const vMid = 0.5 * (vLow + vHigh);
+        const pMid = powerForSpeed(vMid);
+        if (pMid > targetP) {
+          vHigh = vMid;
+        } else {
+          vLow = vMid;
+        }
+      }
+      v = 0.5 * (vLow + vHigh);
+
+      const speedKmH = v * 3.6;
+      timeH = distKm / Math.max(speedKmH, 0.1);
+      avgW = targetP;
+
+      const totalSeconds = timeH * 3600;
+      let hh = Math.floor(totalSeconds / 3600);
+      let mm = Math.floor((totalSeconds - hh * 3600) / 60);
+      let ss = Math.round(totalSeconds - hh * 3600 - mm * 60);
+      if (ss === 60) {
+        ss = 0;
+        mm += 1;
+      }
+      if (mm === 60) {
+        mm = 0;
+        hh += 1;
+      }
+
+      const hhEl = document.getElementById("hh");
+      const mmEl = document.getElementById("mm");
+      const ssEl = document.getElementById("ss");
+      if (hhEl) hhEl.value = String(hh).padStart(2, "0");
+      if (mmEl) mmEl.value = String(mm).padStart(2, "0");
+      if (ssEl) ssEl.value = String(ss).padStart(2, "0");
+    } else {
+      const hh =
+        parseFloat(document.getElementById("hh").value || 0) || 0;
+      const mm =
+        parseFloat(document.getElementById("mm").value || 0) || 0;
+      const ss =
+        parseFloat(document.getElementById("ss").value || 0) || 0;
+      timeH = (hh + mm / 60 + ss / 3600) || 1 / 3600;
+      const speedKmH = distKm / timeH;
+      v = (speedKmH * 1000) / 3600;
+      avgW = powerForSpeed(v);
+    }
+  } else if (calcMode === "time_to_power") {
+    const hh =
+      parseFloat(document.getElementById("hh").value || 0) || 0;
+    const mm =
+      parseFloat(document.getElementById("mm").value || 0) || 0;
+    const ss =
+      parseFloat(document.getElementById("ss").value || 0) || 0;
+    timeH = (hh + mm / 60 + ss / 3600) || 1 / 3600;
+    const speedKmH = distKm / timeH;
+    v = (speedKmH * 1000) / 3600;
+    avgW = powerForSpeed(v);
+  } else if (calcMode === "strategy_power") {
+    const flatP =
+      parseFloat(document.getElementById("flat_power").value || 0) || 0;
+    if (flatP > 0) {
+      let vLow = 0.1;
+      let vHigh = 30.0;
+      for (let i = 0; i < 40; i++) {
+        const vMid = 0.5 * (vLow + vHigh);
+        const pMid = powerForSpeed(vMid);
+        if (pMid > flatP) {
+          vHigh = vMid;
+        } else {
+          vLow = vMid;
+        }
+      }
+      v = 0.5 * (vLow + vHigh);
+      const speedKmH = v * 3.6;
+      timeH = distKm / Math.max(speedKmH, 0.1);
+      avgW = flatP;
+    } else {
+      const hh =
+        parseFloat(document.getElementById("hh").value || 0) || 0;
+      const mm =
+        parseFloat(document.getElementById("mm").value || 0) || 0;
+      const ss =
+        parseFloat(document.getElementById("ss").value || 0) || 0;
+      timeH = (hh + mm / 60 + ss / 3600) || 1 / 3600;
+      const speedKmH = distKm / timeH;
+      v = (speedKmH * 1000) / 3600;
+      avgW = powerForSpeed(v);
+    }
+  }
+
+  const speedKmH = v * 3.6;
+  const avgWkg = rw ? avgW / rw : 0;
+
+  const ftp =
+    Math.max(
+      1,
+      parseFloat(document.getElementById("known_ftp").value || 1) || 1
+    );
+  const IF = avgW / ftp;
+  const TSS = timeH * IF * IF * 100;
+
+  let desc = "Easy workout";
+  const fitness =
+    Math.max(
+      1,
+      parseFloat(document.getElementById("fitnessValue").value || 1) || 1
+    );
+  const ratio = TSS / fitness;
+  if (ratio > 2.01) desc = "Extreme workout";
+  else if (ratio > 1.5) desc = "Hard workout";
+  else if (ratio > 1.25) desc = "Moderately hard workout";
+  else if (ratio > 0.75) desc = "Average workout";
+
+  document.getElementById("intensity").textContent = IF.toFixed(2) + " IF";
+  document.getElementById("stressScore").textContent = TSS.toFixed(2);
+  document.getElementById("workoutDesc").textContent = desc;
+  document.getElementById("avg_w").textContent = avgW.toFixed(1) + " W";
+  document.getElementById("avg_w_kg").textContent =
+    avgWkg.toFixed(2) + " W/kg";
+  document.getElementById("speed").textContent =
+    speedKmH.toFixed(2) + (unit === "metric" ? " km/h" : " mi/h");
+  document.getElementById("slopeGrade").textContent =
+    (grade * 100).toFixed(4) + " %";
+  document.getElementById("rhoUsed").textContent =
+    rho.toFixed(4) + " kg/m³";
+  document.getElementById("pressureUsed").textContent =
+    (pressurePa / 100).toFixed(1) + " hPa";
+  document.getElementById("finishTimePhysics").textContent =
+    formatTimeFromHours(timeH);
+
+  rebuildAdvancedPacing();
+}
+
+/* ---------------- Map + Chart ---------------- */
+let map = null;
+let polyline = null;
+let elevChart = null;
+
+// Safely initialize map + chart
+(function initVisuals() {
+  const mapEl = document.getElementById("map");
+  if (mapEl && window.L) {
+    map = L.map("map").setView([0, 0], 2);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(map);
+  } else {
+    console.warn("Leaflet (L) or #map not available, skipping map init");
+  }
+
+  const canvas = document.getElementById("elevChart");
+  if (canvas && window.Chart) {
+    const elevCtx = canvas.getContext("2d");
+    elevChart = new Chart(elevCtx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            data: [],
+            fill: false,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Distance (km)",
+            },
+            ticks: {
+              maxTicksLimit: 10,
+              callback: (val) => {
+                const num =
+                  typeof val === "number" ? val : parseFloat(val);
+                if (!isFinite(num)) return val;
+                return num.toFixed(1);
+              },
+            },
+          },
+          y: {
+            title: {
+              display: true,
+              text: "Elevation (m)",
+            },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: "index",
+            intersect: false,
+            callbacks: {
+              title: (items) => {
+                if (!items.length) return "";
+                const raw = items[0].label;
+                const num =
+                  typeof raw === "number" ? raw : parseFloat(raw);
+                if (!isFinite(num)) return "";
+                return "km " + num.toFixed(2);
+              },
+              label: (item) => "Elevation: " + item.parsed.y + " m",
+            },
+          },
+        },
+      },
+    });
+  } else {
+    console.warn("Chart.js or #elevChart not available, skipping chart init");
+    elevChart = {
+      data: { labels: [], datasets: [{ data: [] }] },
+      options: {
+        scales: { x: { title: {} }, y: { title: {} } },
+        plugins: { tooltip: { callbacks: {} } },
+      },
+      update() {},
+    };
+  }
+})();
+
+function updateChartUnits(units) {
+  if (!window.currentRouteProfile || !elevChart) return;
+
+  const isImperial = units === "imperial";
+  const dist = window.currentRouteProfile.distances || [];
+  const elev = window.currentRouteProfile.elevations || [];
+
+  const distDisplay = isImperial
+    ? dist.map((d) => d / 1.60934)
+    : dist.slice();
+
+  const elevDisplay = isImperial
+    ? elev.map((e) => e * 3.28084)
+    : elev.slice();
+
+  let yminRaw;
+  let ymaxRaw;
+  if (
+    typeof window.currentRouteProfile.elev_min === "number" &&
+    typeof window.currentRouteProfile.elev_max === "number"
+  ) {
+    const pad = 10;
+    yminRaw = window.currentRouteProfile.elev_min - pad;
+    ymaxRaw = window.currentRouteProfile.elev_max + pad;
+  } else if (elev.length) {
+    const pad = 10;
+    let minE = elev[0],
+      maxE = elev[0];
+    for (let i = 1; i < elev.length; i++) {
+      if (elev[i] < minE) minE = elev[i];
+      if (elev[i] > maxE) maxE = elev[i];
+    }
+    yminRaw = minE - pad;
+    ymaxRaw = maxE + pad;
+  } else {
+    yminRaw = 0;
+    ymaxRaw = 1;
+  }
+
+  const yminDisplay = isImperial ? yminRaw * 3.28084 : yminRaw;
+  const ymaxDisplay = isImperial ? ymaxRaw * 3.28084 : ymaxRaw;
+
+  elevChart.data.labels = distDisplay;
+  elevChart.data.datasets[0].data = elevDisplay;
+
+  elevChart.options.scales.x.title.text = isImperial
+    ? "Distance (mi)"
+    : "Distance (km)";
+  elevChart.options.scales.y.title.text = isImperial
+    ? "Elevation (ft)"
+    : "Elevation (m)";
+  elevChart.options.scales.y.min = yminDisplay;
+  elevChart.options.scales.y.max = ymaxDisplay;
+
+  elevChart.options.plugins.tooltip.callbacks.title = (items) => {
+    if (!items.length) return "";
+    const label = items[0].label;
+    const val = (typeof label === "number" ? label : parseFloat(label)) || 0;
+    return (isImperial ? "mi " : "km ") + val.toFixed(2);
+  };
+
+  elevChart.options.plugins.tooltip.callbacks.label = (item) => {
+    const y = item.parsed.y || 0;
+    return "Elevation: " + y.toFixed(0) + (isImperial ? " ft" : " m");
+  };
+
+  elevChart.update();
+}
+
+// --- Route selection wiring ---
+let routeSelectEl, routeSearchEl, resetRouteBtn, routeMetaEl;
+
+function initRouteUI() {
+  routeSelectEl = document.getElementById("routeSelect");
+  routeSearchEl = document.getElementById("routeSearch");
+  resetRouteBtn = document.getElementById("resetRouteBtn");
+  routeMetaEl = document.getElementById("routeMeta");
+
+  if (!routeSelectEl) {
+    console.warn("routeSelect element not found – skipping route UI init");
+    return;
+  }
+
+  rebuildRouteOptions("");
+
+  if (routeSearchEl) {
+    routeSearchEl.addEventListener("input", function (e) {
+      rebuildRouteOptions(e.target.value);
+    });
+  }
+
+  if (resetRouteBtn) {
+    resetRouteBtn.addEventListener("click", function () {
+      if (routeSearchEl) routeSearchEl.value = "";
+      rebuildRouteOptions("");
+      clearRouteView();
+      localStorage.removeItem("bikesim_last_route");
+    });
+  }
+
+  const lastKey = localStorage.getItem("bikesim_last_route");
+  if (lastKey && ROUTE_INDEX[lastKey]) {
+    routeSelectEl.value = lastKey;
+    loadRoute(lastKey);
+  }
+
+  routeSelectEl.addEventListener("change", (e) => {
+    const key = e.target.value;
+    if (key) {
+      loadRoute(key);
+    } else {
+      clearRouteView();
+      localStorage.removeItem("bikesim_last_route");
+    }
+  });
+
+  const toggleCourseBtn = document.getElementById("toggleCourseAnalysis");
+  const courseAnalysisEl = document.getElementById("courseAnalysis");
+
+  if (toggleCourseBtn && courseAnalysisEl) {
+    toggleCourseBtn.addEventListener("click", () => {
+      const hidden = courseAnalysisEl.classList.toggle("courseAnalysis--hidden");
+      toggleCourseBtn.textContent = hidden
+        ? "Show course analysis"
+        : "Hide course analysis";
+
+      if (!hidden) {
+        const u = document.getElementById("unit").value || "metric";
+        updateChartUnits(u);
+        rebuildTechnicalChallenges();
+        rebuildAdvancedPacing();
+
+        if (map) {
+          setTimeout(() => {
+            map.invalidateSize();
+            if (polyline) {
+              map.fitBounds(polyline.getBounds(), {
+                padding: [20, 20],
+              });
+            }
+          }, 0);
+        }
+      }
+    });
+  }
+}
+
+window.addEventListener("load", initRouteUI);
+
+function clearRouteView() {
+  if (polyline && map) {
+    map.removeLayer(polyline);
+    polyline = null;
+  }
+  if (map) {
+    map.setView([0, 0], 2);
+  }
+  if (elevChart) {
+    elevChart.data.labels = [];
+    elevChart.data.datasets[0].data = [];
+    elevChart.update();
+  }
+  if (routeMetaEl) {
+    routeMetaEl.textContent =
+      "No route selected. You can still enter distance, climb, and altitude manually.";
+  }
+  window.currentRouteProfile = null;
+  window.currentRouteSmooth = null;
+  rebuildAdvancedPacing();
+  const tech = document.getElementById("techChallenges");
+  if (tech) {
+    tech.innerHTML =
+      '<p style="margin:0;font-size:13px;color:#92400e;">Select a route above to list climbs ≥ 3%, descents ≤ −3%, and sharp turns (&gt; 80°).</p>';
+  }
+}
+
+/* ---- Normalisation helpers for route JSON ---- */
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = Math.PI / 180;
+  const φ1 = lat1 * toRad;
+  const φ2 = lat2 * toRad;
+  const dφ = (lat2 - lat1) * toRad;
+  const dλ = (lon2 - lon1) * toRad;
+
+  const a =
+    Math.sin(dφ / 2) * Math.sin(dφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(dλ / 2) * Math.sin(dλ / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function buildNormalizedRoute(raw) {
+  const out = Object.assign({}, raw);
+
+  const elevRaw = Array.isArray(raw.elevations) ? raw.elevations : [];
+  const latlngsRaw = Array.isArray(raw.latlngs) ? raw.latlngs : [];
+
+  function climbFromElevations(eArr) {
+    if (!Array.isArray(eArr) || eArr.length < 2) {
+      return { totalClimb: 0, minE: 0, maxE: 0 };
+    }
+    let totalClimb = 0;
+    let minE = Number(eArr[0]);
+    let maxE = Number(eArr[0]);
+    for (let i = 1; i < eArr.length; i++) {
+      const prev = Number(eArr[i - 1]);
+      const cur = Number(eArr[i]);
+      const de = cur - prev;
+      if (de > 0) totalClimb += de;
+      if (cur < minE) minE = cur;
+      if (cur > maxE) maxE = cur;
+    }
+    return { totalClimb, minE, maxE };
+  }
+
+  const { totalClimb, minE, maxE } = climbFromElevations(elevRaw);
+
+  const n = Math.min(latlngsRaw.length, elevRaw.length);
+  if (n >= 2) {
+    const latlngs = [];
+    const elevations = [];
+    for (let i = 0; i < n; i++) {
+      const pt = latlngsRaw[i];
+      const lat = Number(pt[0]);
+      const lon = Number(pt[1]);
+      latlngs.push([lat, lon]);
+      elevations.push(Number(elevRaw[i]));
+    }
+
+    const distances = [];
+    let cumKm = 0;
+    distances.push(0);
+    for (let i = 1; i < n; i++) {
+      const [lat1, lon1] = latlngs[i - 1];
+      const [lat2, lon2] = latlngs[i];
+      const dM = haversineMeters(lat1, lon1, lat2, lon2);
+      cumKm += dM / 1000;
+      distances.push(Number(cumKm.toFixed(3)));
+    }
+
+    const computedDistKm = distances[distances.length - 1] || 0;
+    const distKmFinal =
+      typeof raw.distance_km === "number" && raw.distance_km > 0.1
+        ? raw.distance_km
+        : computedDistKm;
+
+    out.distances = distances;
+    out.elevations = elevations;
+    out.latlngs = latlngs;
+    out.distance_km = distKmFinal;
+
+    out.total_climb_m =
+      typeof raw.total_climb_m === "number" && raw.total_climb_m > 0
+        ? raw.total_climb_m
+        : Math.round(totalClimb);
+
+    out.elev_min =
+      typeof raw.elev_min === "number" && raw.elev_min !== 0
+        ? raw.elev_min
+        : minE;
+    out.elev_max =
+      typeof raw.elev_max === "number" && raw.elev_max !== 0
+        ? raw.elev_max
+        : maxE;
+
+    return out;
+  }
+
+  out.elevations = elevRaw;
+  out.latlngs = latlngsRaw;
+  out.distances = Array.isArray(raw.distances) ? raw.distances : [];
+
+  let distKmFromArray = 0;
+  if (out.distances.length > 1) {
+    const last = Number(out.distances[out.distances.length - 1]);
+    if (isFinite(last) && last > 0) distKmFromArray = last;
+  }
+  out.distance_km =
+    typeof raw.distance_km === "number" && raw.distance_km > 0
+      ? raw.distance_km
+      : distKmFromArray;
+
+  out.total_climb_m =
+    typeof raw.total_climb_m === "number" && raw.total_climb_m > 0
+      ? raw.total_climb_m
+      : Math.round(totalClimb);
+
+  out.elev_min =
+    typeof raw.elev_min === "number" && raw.elev_min !== 0
+      ? raw.elev_min
+      : minE;
+  out.elev_max =
+    typeof raw.elev_max === "number" && raw.elev_max !== 0
+      ? raw.elev_max
+      : maxE;
+
+  return out;
+}
+
+function buildSmoothedProfile(profile) {
+  if (
+    !profile ||
+    !Array.isArray(profile.distances) ||
+    !Array.isArray(profile.elevations) ||
+    !Array.isArray(profile.latlngs)
+  ) {
+    return null;
+  }
+
+  const srcDist = profile.distances;
+  const srcElev = profile.elevations;
+  const srcLatLng = profile.latlngs;
+  const n = Math.min(srcDist.length, srcElev.length, srcLatLng.length);
+
+  if (n < 2) return null;
+
+  const totalDist = srcDist[n - 1];
+  if (!isFinite(totalDist) || totalDist <= 0) return null;
+
+  const targetStep = Math.max(0.1, Math.min(0.5, totalDist / 400));
+
+  const newDist = [];
+  const newElev = [];
+  const newLatLng = [];
+
+  let d = 0;
+  let j = 0;
+
+  while (d < totalDist - 1e-6) {
+    while (j < n - 2 && srcDist[j + 1] < d) {
+      j++;
+    }
+
+    const d0 = srcDist[j];
+    const d1 = srcDist[j + 1];
+    const t = d1 > d0 ? (d - d0) / (d1 - d0) : 0;
+
+    const e0 = srcElev[j];
+    const e1 = srcElev[j + 1];
+    const e = e0 + (e1 - e0) * t;
+
+    const lat0 = srcLatLng[j][0];
+    const lon0 = srcLatLng[j][1];
+    const lat1 = srcLatLng[j + 1][0];
+    const lon1 = srcLatLng[j + 1][1];
+    const lat = lat0 + (lat1 - lat0) * t;
+    const lon = lon0 + (lon1 - lon0) * t;
+
+    newDist.push(d);
+    newElev.push(e);
+    newLatLng.push([lat, lon]);
+
+    d += targetStep;
+  }
+
+  if (
+    newDist.length === 0 ||
+    newDist[newDist.length - 1] < totalDist - 1e-6
+  ) {
+    newDist.push(totalDist);
+    newElev.push(srcElev[n - 1]);
+    newLatLng.push(srcLatLng[n - 1]);
+  }
+
+  const smoothElev = newElev.slice();
+  const win = 2;
+  for (let i = 0; i < newElev.length; i++) {
+    let sum = 0;
+    let cnt = 0;
+    for (let k = -win; k <= win; k++) {
+      const idx = i + k;
+      if (idx >= 0 && idx < newElev.length) {
+        sum += newElev[idx];
+        cnt++;
+      }
+    }
+    if (cnt > 0) smoothElev[i] = sum / cnt;
+  }
+
+  return {
+    distances: newDist,
+    elevations: smoothElev,
+    latlngs: newLatLng,
+  };
+}
+
+async function loadRoute(key) {
+  if (!key) return;
+  const meta = ROUTE_INDEX[key];
+  if (!meta) return;
+
+  try {
+    const res = await fetch(meta.file);
+    if (!res.ok) {
+      throw new Error("HTTP " + res.status);
+    }
+    const raw = await res.json();
+    const r = buildNormalizedRoute(raw);
+    window.currentRouteProfile = r;
+    window.currentRouteSmooth = buildSmoothedProfile(r);
+
+    if (polyline) {
+      map.removeLayer(polyline);
+      polyline = null;
+    }
+    if (Array.isArray(r.latlngs) && r.latlngs.length > 1) {
+      polyline = L.polyline(r.latlngs, {
+        weight: 4,
+        color: "#ef4444",
+      }).addTo(map);
+      map.fitBounds(polyline.getBounds(), {
+        padding: [20, 20],
+      });
+    } else if (map) {
+      map.setView([0, 0], 2);
+    }
+
+    const currentUnits = document.getElementById("unit").value || "metric";
+    updateChartUnits(currentUnits);
+
+    if (typeof r.distance_km === "number" && r.distance_km > 0) {
+      const km = r.distance_km;
+      const mi = km / 1.60934;
+      const distKmEl = document.getElementById("distance-km");
+      const distMiEl = document.getElementById("distance-mi");
+      if (distKmEl) distKmEl.value = km.toFixed(1);
+      if (distMiEl) distMiEl.value = mi.toFixed(2);
+    }
+
+    if (typeof r.total_climb_m === "number" && r.total_climb_m > 0) {
+      const m = r.total_climb_m;
+      const ft = m * 3.28084;
+      const climbMEl = document.getElementById("total-climb-m");
+      const climbFtEl = document.getElementById("total-climb-ft");
+      if (climbMEl) climbMEl.value = m.toFixed(0);
+      if (climbFtEl) climbFtEl.value = ft.toFixed(0);
+    }
+
+    if (typeof meta.tempC === "number") {
+      const tC = document.getElementById("temperature-c");
+      const tF = document.getElementById("temperature-f");
+      if (tC) tC.value = meta.tempC.toFixed(1);
+      if (tF) tF.value = (meta.tempC * 9 / 5 + 32).toFixed(1);
+    }
+
+    if (Array.isArray(r.elevations) && r.elevations.length > 0) {
+      const startAlt = r.elevations[0];
+      const altEl = document.getElementById("altitude");
+      if (altEl) altEl.value = Math.round(startAlt);
+    }
+
+    const distTot =
+      typeof r.distance_km === "number" && r.distance_km > 0
+        ? r.distance_km
+        : Array.isArray(r.distances) && r.distances.length
+        ? r.distances[r.distances.length - 1]
+        : 0;
+
+    const climbTot =
+      typeof r.total_climb_m === "number" ? r.total_climb_m : 0;
+    const avgGrade = distTot > 0 ? climbTot / (distTot * 10) : 0;
+
+    const elevMin =
+      typeof r.elev_min === "number"
+        ? r.elev_min
+        : Array.isArray(r.elevations) && r.elevations.length
+        ? Math.min.apply(null, r.elevations)
+        : 0;
+
+    const elevMax =
+      typeof r.elev_max === "number"
+        ? r.elev_max
+        : Array.isArray(r.elevations) && r.elevations.length
+        ? Math.max.apply(null, r.elevations)
+        : 0;
+
+    const name = r.name || meta.name || key;
+
+    if (routeMetaEl) {
+      routeMetaEl.textContent = `${name} – ${distTot.toFixed(
+        1
+      )} km, climb ≈ ${climbTot.toFixed(
+        0
+      )} m (avg grade ≈ ${avgGrade.toFixed(
+        1
+      )}%), elevation ${elevMin.toFixed(0)}–${elevMax.toFixed(0)} m`;
+    }
+
+    localStorage.setItem("bikesim_last_route", key);
+
+    calculateResult();
+    rebuildTechnicalChallenges();
+  } catch (err) {
+    console.error("Failed to load route", key, err);
+    if (routeMetaEl) {
+      routeMetaEl.textContent = "Error loading route data.";
+    }
+    const tech = document.getElementById("techChallenges");
+    if (tech) {
+      tech.innerHTML =
+        '<p style="margin:0;font-size:13px;color:#92400e;">Error loading route data, cannot compute technical challenges.</p>';
+    }
+  }
+}
+
+function rebuildRouteOptions(filterText) {
+  const txt = (filterText || "").toLowerCase();
+
+  if (!routeSelectEl) return;
+
+  while (routeSelectEl.options.length > 0) {
+    routeSelectEl.remove(0);
+  }
+
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = "— No route selected —";
+  routeSelectEl.appendChild(defaultOpt);
+
+  const entries = [];
+  for (const key in ROUTE_INDEX) {
+    if (Object.prototype.hasOwnProperty.call(ROUTE_INDEX, key)) {
+      entries.push({ key: key, meta: ROUTE_INDEX[key] });
+    }
+  }
+
+  entries.sort(function (a, b) {
+    const nameA = (a.meta.name || a.key).toLowerCase();
+    const nameB = (b.meta.name || b.key).toLowerCase();
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    return 0;
+  });
+
+  entries.forEach(function (entry) {
+    const key = entry.key;
+    const meta = entry.meta;
+    const name = meta.name || key;
+    const haystack = (name + " " + key).toLowerCase();
+
+    if (!txt || haystack.indexOf(txt) !== -1) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = name;
+      routeSelectEl.appendChild(opt);
+    }
+  });
+
+  if (filterText && routeSelectEl.options.length === 2) {
+    routeSelectEl.selectedIndex = 1;
+    loadRoute(routeSelectEl.value);
+  } else {
+    routeSelectEl.value = "";
+  }
+}
