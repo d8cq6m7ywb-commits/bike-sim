@@ -381,6 +381,54 @@
         color: #444;
         text-align: right;
       }
+      .zoneBar__wrap {
+        margin-top: 10px;
+        font-size: 13px;
+      }
+      .zoneBar__label {
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: #444;
+      }
+      .zoneBar__track {
+        display: flex;
+        height: 18px;
+        border-radius: 4px;
+        overflow: hidden;
+        width: 100%;
+      }
+      .zoneBar__seg {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        color: #fff;
+        font-weight: 700;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .zone--1 { background: #3b82f6; }
+      .zone--2 { background: #22c55e; }
+      .zone--3 { background: #eab308; }
+      .zone--4 { background: #f97316; }
+      .zone--5 { background: #ef4444; }
+      .zoneBar__legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        margin-top: 4px;
+        font-size: 11px;
+        color: #555;
+      }
+      .zoneBar__legend span::before {
+        content: "■ ";
+      }
+      .zoneBar__legend .z1::before { color: #3b82f6; }
+      .zoneBar__legend .z2::before { color: #22c55e; }
+      .zoneBar__legend .z3::before { color: #eab308; }
+      .zoneBar__legend .z4::before { color: #f97316; }
+      .zoneBar__legend .z5::before { color: #ef4444; }
 
       .techChallenges__section {
         margin-top: 14px;
@@ -598,6 +646,22 @@
                 onchange="calculateResult();"
               />
               <span class="unit__calc">W</span>
+            </div>
+          </div>
+          <div class="row__calc">
+            <label class="label__calc">Descent power</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="descent_power"
+                class="input__calc"
+                value="0"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">W</span>
+            </div>
+            <div class="notes">
+              Power output on descents. 0 = coast to terminal velocity.
             </div>
           </div>
           <div class="row__calc">
@@ -1047,6 +1111,22 @@
             <span class="res__label">Pressure used</span
             ><span class="res__value" id="pressureUsed">— hPa</span>
           </div>
+          <div class="row__res--calc">
+            <span class="res__label">Total energy</span
+            ><span class="res__value" id="energyKJ">— kJ</span>
+          </div>
+          <div class="row__res--calc" id="npRow" style="display:none">
+            <span class="res__label">Normalized Power (NP)</span
+            ><span class="res__value" id="normalizedPower">— W</span>
+          </div>
+          <div class="row__res--calc" id="viRow" style="display:none">
+            <span class="res__label">Variability Index (VI)</span
+            ><span class="res__value" id="variabilityIndex">—</span>
+          </div>
+          <div class="row__res--calc" id="courseSplitRow" style="display:none">
+            <span class="res__label">Course split</span
+            ><span class="res__value" id="courseSplit">—</span>
+          </div>
         </div>
 
         <div class="notes">
@@ -1309,6 +1389,17 @@
 
         /* -------- input helpers & physics ---------- */
 
+        // Smooth elevation array with a moving average to reduce GPS noise
+        function smoothElevations(elev, halfWin) {
+          return elev.map(function(_, i) {
+            var lo = Math.max(0, i - halfWin);
+            var hi = Math.min(elev.length - 1, i + halfWin);
+            var sum = 0;
+            for (var j = lo; j <= hi; j++) sum += elev[j];
+            return sum / (hi - lo + 1);
+          });
+        }
+
         function changeTyreCondition() {
           document.getElementById("crr_rolling").value =
             document.getElementById("tyreCondition").value;
@@ -1439,6 +1530,8 @@
           const avgWLbl = document.getElementById("avgWLabel");
           const speedLbl = document.getElementById("speedLabel");
 
+          var stratOnlyIds = ["npRow", "viRow", "courseSplitRow"];
+
           if (mode === "power_to_time") {
             if (rowPower) rowPower.style.display = "flex";
             if (rowTime) rowTime.style.display = "flex";
@@ -1447,6 +1540,7 @@
             if (ftLabel) ftLabel.textContent = "Finish time (physics)";
             if (avgWLbl) avgWLbl.textContent = "Avg W (physics est. / input)";
             if (speedLbl) speedLbl.textContent = "Speed";
+            stratOnlyIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; });
           } else if (mode === "time_to_power") {
             if (rowPower) rowPower.style.display = "none";
             if (rowTime) rowTime.style.display = "flex";
@@ -1455,6 +1549,7 @@
             if (ftLabel) ftLabel.textContent = "Finish time (physics)";
             if (avgWLbl) avgWLbl.textContent = "Avg W (physics est. / input)";
             if (speedLbl) speedLbl.textContent = "Speed";
+            stratOnlyIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; });
           } else if (mode === "strategy_power") {
             if (rowPower) rowPower.style.display = "none";
             if (rowTime) rowTime.style.display = "none";
@@ -1542,6 +1637,32 @@
             else vLow = vMid;
           }
           return vLow;
+        }
+
+        // Compute the speed at which a rider coasts (0W) on a descent:
+        // gravity assist exactly equals drag + rolling resistance.
+        // Uses unclamped power to find the sign-change crossing.
+        function terminalVelocity(grade, totalWeight, crr, cda, rho, wind, driveEff) {
+          var g = 9.80665;
+          var sinTheta = grade / Math.sqrt(1 + grade * grade);
+          var cosTheta = 1 / Math.sqrt(1 + grade * grade);
+          function rawPower(v) {
+            var vAir = v + wind;
+            var vAirAbs = Math.abs(vAir);
+            var pAero = 0.5 * rho * cda * vAirAbs * vAirAbs * v;
+            var pRoll = g * totalWeight * crr * cosTheta * v;
+            var pClimb = g * totalWeight * sinTheta * v; // negative on descent
+            return pAero + pRoll + pClimb;
+          }
+          var vLow = 0.5, vHigh = 38.0; // 38 m/s = ~137 km/h ceiling
+          if (rawPower(vLow) >= 0) return vLow;  // flat or climb, no coasting boost
+          if (rawPower(vHigh) <= 0) return vHigh; // impossibly steep
+          for (var i = 0; i < 40; i++) {
+            var vMid = 0.5 * (vLow + vHigh);
+            if (rawPower(vMid) < 0) vLow = vMid;
+            else vHigh = vMid;
+          }
+          return 0.5 * (vLow + vHigh);
         }
 
         function rebuildAdvancedPacing() {
@@ -1671,6 +1792,11 @@
             return;
           }
 
+          const descentP =
+            parseFloat(
+              document.getElementById("descent_power").value || "0"
+            ) || 0;
+
           let maxDesc =
             parseFloat(
               document.getElementById("max_descent_speed").value || "0"
@@ -1738,22 +1864,25 @@
             else if (grade <= -0.01) kind = "Descent";
 
             let targetW = flatP;
+            let v;
 
-            if (kind === "Climb") {
+            if (kind === "Descent") {
+              if (descentP <= 0) {
+                // Coast: rider outputs 0W, accelerates to terminal velocity
+                targetW = 0;
+                v = terminalVelocity(grade, totalWeight, crr, cda, rho, wind, driveEff);
+              } else {
+                targetW = descentP;
+                v = solveSpeedForTargetPower(descentP, grade, totalWeight, crr, cda, rho, wind, driveEff);
+              }
+              if (v > maxDesc_mps) v = maxDesc_mps;
+            } else if (kind === "Climb") {
               const approxP = climb10P > 0 ? climb10P : flatP;
               let vApprox = solveSpeedForTargetPower(
-                approxP,
-                grade,
-                totalWeight,
-                crr,
-                cda,
-                rho,
-                wind,
-                driveEff
+                approxP, grade, totalWeight, crr, cda, rho, wind, driveEff
               );
               if (vApprox <= 0) vApprox = 5;
               const approxTimeSec = lenM / vApprox;
-
               if (approxTimeSec <= 60 && climb1P > 0) {
                 targetW = climb1P;
               } else if (approxTimeSec <= 180 && climb3P > 0) {
@@ -1763,22 +1892,12 @@
               } else {
                 targetW = flatP;
               }
+              v = solveSpeedForTargetPower(targetW, grade, totalWeight, crr, cda, rho, wind, driveEff);
+            } else {
+              v = solveSpeedForTargetPower(targetW, grade, totalWeight, crr, cda, rho, wind, driveEff);
             }
 
-            let v = solveSpeedForTargetPower(
-              targetW,
-              grade,
-              totalWeight,
-              crr,
-              cda,
-              rho,
-              wind,
-              driveEff
-            );
-            if (kind === "Descent" && v > maxDesc_mps) {
-              v = maxDesc_mps;
-            }
-            if (v <= 0) continue;
+            if (!v || v <= 0) continue;
 
             const segTimeSec = lenM / v;
             totalTimeSec += segTimeSec;
@@ -1812,6 +1931,11 @@
               return parts.join(":");
             }
 
+            const elevGainM = eEnd - eStart;
+            const vam = (kind === "Climb" && segTimeSec > 0)
+              ? Math.round(elevGainM / (segTimeSec / 3600))
+              : null;
+
             rows.push({
               from: startDisplay,
               to: endDisplay,
@@ -1822,6 +1946,7 @@
               speed: speedDisplay,
               time: segTimeSec,
               timeStr: fmtTime(segTimeSec),
+              vam,
             });
           }
 
@@ -1848,7 +1973,7 @@
             ')</th><th>Type</th><th>Grade (%)</th>' +
             "<th>Power (W)</th><th>Speed (" +
             unitSpeedLabel +
-            ")</th><th>Time</th></tr></thead><tbody>";
+            ")</th><th>Time</th><th>VAM</th></tr></thead><tbody>";
 
           rows.forEach((r, i) => {
             html +=
@@ -1880,6 +2005,9 @@
               "<td>" +
               r.timeStr +
               "</td>" +
+              "<td>" +
+              (r.vam !== null ? r.vam + " m/h" : "—") +
+              "</td>" +
               "</tr>";
           });
 
@@ -1896,56 +2024,122 @@
             );
           }
 
-          // Compute weighted average power and strategy-based avg speed
-          const stratAvgW = rows.reduce(function(sum, r) { return sum + r.power * r.time; }, 0) / Math.max(1, totalTimeSec);
+          // ── Core metrics from segment data ──────────────────────────
+          const stratAvgW = rows.reduce(function(s, r) { return s + r.power * r.time; }, 0) / Math.max(1, totalTimeSec);
           const stratAvgSpeedKmh = totalDistKm / Math.max(0.0001, totalTimeSec / 3600);
           const stratAvgSpeedDisplay = unit === "metric" ? stratAvgSpeedKmh : stratAvgSpeedKmh / 1.60934;
 
+          // Normalized Power (approximated from segment blocks, 4th-power weighted)
+          const np4avg = rows.reduce(function(s, r) { return s + Math.pow(r.power, 4) * r.time; }, 0) / Math.max(1, totalTimeSec);
+          const NP = Math.pow(Math.max(0, np4avg), 0.25);
+          const VI = stratAvgW > 0 ? NP / stratAvgW : 1;
+
+          // Total mechanical energy (kJ) — descents at 0W contribute 0
+          const totalEnergyKJ = rows.reduce(function(s, r) { return s + r.power * r.time; }, 0) / 1000;
+
+          // Course split (in display units)
+          var climbLen = 0, descentLen = 0, flatLen = 0;
+          rows.forEach(function(r) {
+            if (r.kind === "Climb") climbLen += r.len;
+            else if (r.kind === "Descent") descentLen += r.len;
+            else flatLen += r.len;
+          });
+
+          // Power zones (time in seconds per zone, based on % FTP)
+          const ftpStrat = Math.max(1, parseFloat(document.getElementById("known_ftp").value || "1") || 1);
+          const zones = [0, 0, 0, 0, 0]; // Z1–Z5
+          rows.forEach(function(r) {
+            const pct = r.power / ftpStrat;
+            if (pct < 0.55)      zones[0] += r.time;
+            else if (pct < 0.75) zones[1] += r.time;
+            else if (pct < 0.90) zones[2] += r.time;
+            else if (pct < 1.05) zones[3] += r.time;
+            else                 zones[4] += r.time;
+          });
+
+          // ── Build zone bar HTML ──────────────────────────────────────
+          var zoneLabels = ["Z1 <55%", "Z2 55–75%", "Z3 75–90%", "Z4 90–105%", "Z5 >105%"];
+          var zoneClasses = ["zone--1", "zone--2", "zone--3", "zone--4", "zone--5"];
+          var zoneLegend = ["z1", "z2", "z3", "z4", "z5"];
+          var zoneHtml = '<div class="zoneBar__wrap"><div class="zoneBar__label">Power zones (% of FTP — time on course)</div><div class="zoneBar__track">';
+          for (var z = 0; z < 5; z++) {
+            var pctTime = totalTimeSec > 0 ? (zones[z] / totalTimeSec) * 100 : 0;
+            if (pctTime > 1) {
+              zoneHtml += '<div class="zoneBar__seg ' + zoneClasses[z] + '" style="width:' + pctTime.toFixed(1) + '%">'
+                + (pctTime >= 6 ? pctTime.toFixed(0) + "%" : "") + '</div>';
+            }
+          }
+          zoneHtml += '</div><div class="zoneBar__legend">';
+          for (var z = 0; z < 5; z++) {
+            var pctTime = totalTimeSec > 0 ? (zones[z] / totalTimeSec) * 100 : 0;
+            zoneHtml += '<span class="' + zoneLegend[z] + '">' + zoneLabels[z] + ': ' + pctTime.toFixed(0) + '%</span>';
+          }
+          zoneHtml += '</div></div>';
+
+          // ── Assemble final HTML ──────────────────────────────────────
           html += "</tbody></table>";
-          html +=
-            '<p class="advSummaryLine">Advanced pacing total time: <strong>' +
-            fmtTotal(totalTimeSec) +
-            "</strong> &nbsp;&middot;&nbsp; Avg speed: <strong>" +
-            stratAvgSpeedDisplay.toFixed(2) +
-            " " + unitSpeedLabel +
-            "</strong> &nbsp;&middot;&nbsp; Weighted avg power: <strong>" +
-            stratAvgW.toFixed(0) +
-            " W</strong></p>";
+          html += '<p class="advSummaryLine">Total time: <strong>' + fmtTotal(totalTimeSec) +
+            "</strong> &nbsp;&middot;&nbsp; Avg speed: <strong>" + stratAvgSpeedDisplay.toFixed(2) + " " + unitSpeedLabel +
+            "</strong> &nbsp;&middot;&nbsp; Avg W: <strong>" + stratAvgW.toFixed(0) +
+            " W</strong> &nbsp;&middot;&nbsp; NP: <strong>" + NP.toFixed(0) +
+            " W</strong> &nbsp;&middot;&nbsp; VI: <strong>" + VI.toFixed(2) + "</strong></p>";
+          html += zoneHtml;
 
           container.innerHTML = html;
 
           if (strategyRow) strategyRow.style.display = "flex";
           if (strategyVal) strategyVal.textContent = fmtTotal(totalTimeSec);
 
-          // Override main results panel with strategy-accurate values
-          const speedEl = document.getElementById("speed");
+          // ── Override main results panel with strategy-accurate values ──
+          var speedEl = document.getElementById("speed");
           if (speedEl) speedEl.textContent = stratAvgSpeedDisplay.toFixed(2) + (unit === "metric" ? " km/h" : " mi/h");
 
-          const avgWEl = document.getElementById("avg_w");
+          var avgWEl = document.getElementById("avg_w");
           if (avgWEl) avgWEl.textContent = stratAvgW.toFixed(1) + " W";
 
-          const rwStrat = parseFloat(document.getElementById("rider-weight-kg").value || "0") || 0;
-          const avgWkgEl = document.getElementById("avg_w_kg");
+          var rwStrat = parseFloat(document.getElementById("rider-weight-kg").value || "0") || 0;
+          var avgWkgEl = document.getElementById("avg_w_kg");
           if (avgWkgEl) avgWkgEl.textContent = (rwStrat > 0 ? (stratAvgW / rwStrat) : 0).toFixed(2) + " W/kg";
 
-          const ftpStrat = Math.max(1, parseFloat(document.getElementById("known_ftp").value || "1") || 1);
-          const IFstrat = stratAvgW / ftpStrat;
-          const timeHstrat = totalTimeSec / 3600;
-          const TSSstrat = timeHstrat * IFstrat * IFstrat * 100;
-          const fitnessStrat = Math.max(1, parseFloat(document.getElementById("fitnessValue").value || "1") || 1);
-          const ratioStrat = TSSstrat / fitnessStrat;
-          let descStrat = "Easy workout";
+          var IFstrat = stratAvgW / ftpStrat;
+          var timeHstrat = totalTimeSec / 3600;
+          var TSSstrat = timeHstrat * IFstrat * IFstrat * 100;
+          var fitnessStrat = Math.max(1, parseFloat(document.getElementById("fitnessValue").value || "1") || 1);
+          var ratioStrat = TSSstrat / fitnessStrat;
+          var descStrat = "Easy workout";
           if (ratioStrat > 2.01) descStrat = "Extreme workout";
           else if (ratioStrat > 1.5) descStrat = "Hard workout";
           else if (ratioStrat > 1.25) descStrat = "Moderately hard workout";
           else if (ratioStrat > 0.75) descStrat = "Average workout";
 
-          const intEl = document.getElementById("intensity");
+          var intEl = document.getElementById("intensity");
           if (intEl) intEl.textContent = IFstrat.toFixed(2) + " IF";
-          const tssEl = document.getElementById("stressScore");
+          var tssEl = document.getElementById("stressScore");
           if (tssEl) tssEl.textContent = TSSstrat.toFixed(2);
-          const descEl = document.getElementById("workoutDesc");
-          if (descEl) descEl.textContent = descStrat;
+          var descEl2 = document.getElementById("workoutDesc");
+          if (descEl2) descEl2.textContent = descStrat;
+
+          // New metrics
+          var eKJ = document.getElementById("energyKJ");
+          if (eKJ) eKJ.textContent = totalEnergyKJ.toFixed(0) + " kJ";
+
+          var npEl = document.getElementById("normalizedPower");
+          if (npEl) npEl.textContent = NP.toFixed(0) + " W";
+          var viEl = document.getElementById("variabilityIndex");
+          if (viEl) viEl.textContent = VI.toFixed(3);
+
+          var distLabel = unit === "metric" ? " km" : " mi";
+          var csEl = document.getElementById("courseSplit");
+          if (csEl) csEl.textContent =
+            "↑ " + climbLen.toFixed(1) + distLabel +
+            " · → " + flatLen.toFixed(1) + distLabel +
+            " · ↓ " + descentLen.toFixed(1) + distLabel;
+
+          // Show strategy-only rows
+          ["npRow","viRow","courseSplitRow"].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = "flex";
+          });
         }
 
         /* --- Technical challenges --- */
@@ -2481,6 +2675,9 @@
           document.getElementById("finishTimePhysics").textContent =
             formatTimeFromHours(timeH);
 
+          const eKJSimple = document.getElementById("energyKJ");
+          if (eKJSimple) eKJSimple.textContent = (avgW * timeH * 3600 / 1000).toFixed(0) + " kJ";
+
           rebuildAdvancedPacing();
         }
 
@@ -2774,6 +2971,11 @@
             }
             const raw = await res.json();
             const r = buildNormalizedRoute(raw);
+            // Apply elevation smoothing (halfWin=3 → 7-point moving average)
+            // Reduces GPS noise without losing meaningful terrain shape
+            if (Array.isArray(r.elevations) && r.elevations.length > 6) {
+              r.elevations = smoothElevations(r.elevations, 3);
+            }
             window.currentRouteProfile = r;
 
             if (polyline) {
