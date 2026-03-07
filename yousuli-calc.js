@@ -196,34 +196,43 @@ function updateCalcModeUI() {
   const avgWLbl = document.getElementById("avgWLabel");
   const speedLbl = document.getElementById("speedLabel");
 
-  var stratOnlyIds = ["npRow", "viRow", "courseSplitRow"];
+  var stratOnlyIds = ["npRow", "viRow", "courseSplitRow", "nutritionRow"];
+  var isStrat = (mode === "strategy_power");
 
   if (mode === "power_to_time") {
     if (rowPower) rowPower.style.display = "flex";
-    if (rowTime) rowTime.style.display = "flex";
-    if (advWrap) advWrap.style.display = "none";
+    if (rowTime)  rowTime.style.display  = "flex";
+    if (advWrap)  advWrap.style.display  = "none";
     if (stratRow) stratRow.style.display = "none";
-    if (ftLabel) ftLabel.textContent = "Finish time (physics)";
-    if (avgWLbl) avgWLbl.textContent = "Avg W (physics est. / input)";
+    if (ftLabel)  ftLabel.textContent  = "Finish time (physics)";
+    if (avgWLbl)  avgWLbl.textContent  = "Avg W (physics est. / input)";
     if (speedLbl) speedLbl.textContent = "Speed";
     stratOnlyIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; });
   } else if (mode === "time_to_power") {
     if (rowPower) rowPower.style.display = "none";
-    if (rowTime) rowTime.style.display = "flex";
-    if (advWrap) advWrap.style.display = "none";
+    if (rowTime)  rowTime.style.display  = "flex";
+    if (advWrap)  advWrap.style.display  = "none";
     if (stratRow) stratRow.style.display = "none";
-    if (ftLabel) ftLabel.textContent = "Finish time (physics)";
-    if (avgWLbl) avgWLbl.textContent = "Avg W (physics est. / input)";
+    if (ftLabel)  ftLabel.textContent  = "Finish time (physics)";
+    if (avgWLbl)  avgWLbl.textContent  = "Avg W (physics est. / input)";
     if (speedLbl) speedLbl.textContent = "Speed";
     stratOnlyIds.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = "none"; });
   } else if (mode === "strategy_power") {
     if (rowPower) rowPower.style.display = "none";
-    if (rowTime) rowTime.style.display = "none";
-    if (advWrap) advWrap.style.display = "block";
+    if (rowTime)  rowTime.style.display  = "none";
+    if (advWrap)  advWrap.style.display  = "block";
     if (stratRow) stratRow.style.display = "flex";
-    if (ftLabel) ftLabel.textContent = "Finish time (flat est.)";
-    if (avgWLbl) avgWLbl.textContent = "Avg W (weighted, strategy)";
+    if (ftLabel)  ftLabel.textContent  = "Finish time (flat est.)";
+    if (avgWLbl)  avgWLbl.textContent  = "Avg W (weighted, strategy)";
     if (speedLbl) speedLbl.textContent = "Avg speed (strategy)";
+  }
+
+  // Hide A/B and sensitivity sections when not in strategy mode
+  var abSec   = document.getElementById("abSection");
+  var sensSec = document.getElementById("sensSection");
+  if (!isStrat) {
+    if (abSec)   abSec.style.display   = "none";
+    if (sensSec) sensSec.style.display = "none";
   }
 }
 
@@ -331,6 +340,191 @@ function terminalVelocity(grade, totalWeight, crr, cda, rho, wind, driveEff) {
   return 0.5 * (vLow + vHigh);
 }
 
+/* ─── runSimulation(cfg) ──────────────────────────────────────────────────
+   Pure physics engine. Accepts a config object, returns simulation results.
+   cfg fields:
+     dist []             cumulative distances (km)
+     elev []             elevations (m)
+     latlngs []          [[lat,lon],…] optional – enables bearing-based wind
+     flatP / climb1P / climb3P / climb10P / descentP  (W)
+     maxDesc_mps         max descent speed m/s (Infinity = no cap)
+     totalWeight         system mass kg
+     crr / cda           rolling + aero coefficients
+     cdaClimbDelta       extra CdA on grade ≥ 4% (m², 0 = off)
+     rho                 air density kg/m³
+     windScalar          signed wind m/s (+ = headwind); used when no direction
+     windSpeed_mps       wind magnitude m/s (used with windDirDeg)
+     windDirDeg          wind FROM direction °; null/undefined → scalar mode
+     driveEff            drivetrain efficiency 0–1
+     nLaps               integer ≥ 1
+     powerFadePctPerHr   % power loss per hour (0 = none)
+     unit                "metric" | "imperial"
+     checkpointIntervalKm  0 = off
+   Returns:
+     { rows, totalTimeSec, totalDistKm, checkpointTimes }
+   ────────────────────────────────────────────────────────────────────────── */
+function runSimulation(cfg) {
+  var dist   = cfg.dist;
+  var elev   = cfg.elev;
+  var ll     = cfg.latlngs || null;
+  var flatP  = cfg.flatP  || 0;
+  var c1P    = cfg.climb1P  || 0;
+  var c3P    = cfg.climb3P  || 0;
+  var c10P   = cfg.climb10P || 0;
+  var descP  = cfg.descentP || 0;
+  var mxD    = cfg.maxDesc_mps !== undefined ? cfg.maxDesc_mps : Infinity;
+  var mass   = cfg.totalWeight || 75;
+  var crr    = cfg.crr || 0.0035;
+  var cdaB   = cfg.cda || 0.18;
+  var cdaDelta = cfg.cdaClimbDelta || 0;
+  var rho    = cfg.rho || 1.2;
+  var wSc    = cfg.windScalar || 0;         // signed scalar wind m/s
+  var wSpd   = cfg.windSpeed_mps || 0;      // magnitude for bearing mode
+  var wDir   = cfg.windDirDeg;              // null/undefined → scalar
+  var useBW  = (ll && ll.length >= 2 && wDir !== null && wDir !== undefined && !isNaN(wDir));
+  var eff    = cfg.driveEff || 0.98;
+  var nLaps  = Math.max(1, Math.round(cfg.nLaps || 1));
+  var fadeP  = cfg.powerFadePctPerHr || 0;
+  var unit   = cfg.unit || "metric";
+  var cpInt  = cfg.checkpointIntervalKm || 0;
+
+  var dBase  = dist[dist.length - 1];
+  var tSegKm = dBase >= 120 ? 5 : 3;
+
+  // ── Build segment list (indices into dist/elev arrays) ──────────────
+  var baseSegs = [];
+  var si = 0, sDist = dist[0];
+  for (var i = 1; i < dist.length; i++) {
+    var stepKm = dist[i] - dist[i - 1];
+    var stepM  = stepKm * 1000;
+    var stepEl = elev[i] - elev[i - 1];
+    var sg     = stepM > 0 ? stepEl / stepM : 0;
+    var isSteep = Math.abs(sg) >= 0.08 && stepKm >= 0.7;
+    var longEnough = (dist[i] - sDist) >= tSegKm && i > si + 1;
+    if (isSteep) {
+      if (i - 1 > si) baseSegs.push({ s: si, e: i - 1 });
+      baseSegs.push({ s: i - 1, e: i });
+      si = i; sDist = dist[i];
+    } else if (longEnough) {
+      baseSegs.push({ s: si, e: i });
+      si = i; sDist = dist[i];
+    }
+  }
+  if (si < dist.length - 1) baseSegs.push({ s: si, e: dist.length - 1 });
+
+  var rows   = [];
+  var total  = 0;
+  var cpTimes = [];
+  var nextCp  = cpInt > 0 ? cpInt : Infinity;
+
+  function fmtSec(sec) {
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec - h * 3600) / 60);
+    var s = Math.round(sec - h * 3600 - m * 60);
+    if (s === 60) { s = 0; m++; }
+    if (m === 60) { m = 0; h++; }
+    var parts = [];
+    if (h > 0) parts.push(String(h).padStart(2, "0"));
+    parts.push(String(m).padStart(2, "0"));
+    parts.push(String(s).padStart(2, "0"));
+    return parts.join(":");
+  }
+
+  for (var lap = 0; lap < nLaps; lap++) {
+    var off = lap * dBase;
+
+    for (var b = 0; b < baseSegs.length; b++) {
+      var seg  = baseSegs[b];
+      var dS   = dist[seg.s] + off;
+      var dE   = dist[seg.e] + off;
+      var lenK = Math.max(0.001, dE - dS);
+      var lenM = lenK * 1000;
+      var eS   = elev[seg.s];
+      var eE   = elev[seg.e];
+      var grade = lenM > 0 ? (eE - eS) / lenM : 0;
+
+      // Effective CdA (extra on steep climbs)
+      var cda = (cdaDelta > 0 && grade >= 0.04) ? cdaB + cdaDelta : cdaB;
+
+      // Effective wind (bearing-based or scalar)
+      var wind;
+      if (useBW && ll) {
+        var mi   = Math.min(Math.round((seg.s + seg.e) / 2), ll.length - 2);
+        var bear = bearingDeg(ll[mi][0], ll[mi][1], ll[mi + 1][0], ll[mi + 1][1]);
+        // headwind = wSpd × cos(riderBearing − windFromDir)
+        wind = wSpd * Math.cos((bear - wDir) * Math.PI / 180);
+      } else {
+        wind = wSc;
+      }
+
+      // Power fade (linear, % per hour)
+      var fade = fadeP > 0 ? Math.max(0, 1 - (fadeP / 100) * (total / 3600)) : 1;
+
+      var kind = grade >= 0.01 ? "Climb" : (grade <= -0.01 ? "Descent" : "Flat/rolling");
+      var targetW, v;
+
+      if (kind === "Descent") {
+        if (descP <= 0) {
+          targetW = 0;
+          v = terminalVelocity(grade, mass, crr, cda, rho, wind, eff);
+        } else {
+          targetW = descP * fade;
+          v = solveSpeedForTargetPower(targetW, grade, mass, crr, cda, rho, wind, eff);
+        }
+        if (v > mxD) v = mxD;
+      } else if (kind === "Climb") {
+        var ap = ((c10P > 0 ? c10P : flatP)) * fade;
+        var va = solveSpeedForTargetPower(ap, grade, mass, crr, cda, rho, wind, eff);
+        if (va <= 0) va = 5;
+        var ta = lenM / va;
+        var bP = (ta <= 60  && c1P > 0)  ? c1P  :
+                 (ta <= 180 && c3P > 0)  ? c3P  :
+                 (c10P > 0 ? c10P : flatP);
+        targetW = bP * fade;
+        v = solveSpeedForTargetPower(targetW, grade, mass, crr, cda, rho, wind, eff);
+      } else {
+        targetW = flatP * fade;
+        v = solveSpeedForTargetPower(targetW, grade, mass, crr, cda, rho, wind, eff);
+      }
+
+      if (!v || v <= 0) continue;
+
+      var segT = lenM / v;
+      total   += segT;
+
+      // Checkpoint accumulation
+      while (cpInt > 0 && dE >= nextCp) {
+        var frac = (nextCp - dS) / lenK;
+        cpTimes.push({ km: nextCp, timeSec: total - segT + frac * segT });
+        nextCp += cpInt;
+      }
+
+      var spKmh  = v * 3.6;
+      var spDisp = unit === "metric" ? spKmh : spKmh / 1.60934;
+      var lnDisp = unit === "metric" ? lenK  : lenK  / 1.60934;
+      var frDisp = unit === "metric" ? dS    : dS    / 1.60934;
+      var toDisp = unit === "metric" ? dE    : dE    / 1.60934;
+      var vam    = (kind === "Climb" && segT > 0)
+                   ? Math.round((eE - eS) / (segT / 3600)) : null;
+
+      rows.push({
+        from: frDisp, to: toDisp, len: lnDisp,
+        kind: kind, grade: grade * 100, power: targetW,
+        speed: spDisp, time: segT, timeStr: fmtSec(segT),
+        cumTimeSec: total, vam: vam, lapNum: lap + 1,
+        windEff: wind, cda: cda
+      });
+    }
+  }
+
+  return {
+    rows: rows,
+    totalTimeSec: total,
+    totalDistKm: dBase * nLaps,
+    checkpointTimes: cpTimes
+  };
+}
+
 function rebuildAdvancedPacing() {
   const container = document.getElementById("advancedPacing");
   const mode = document.getElementById("calcMode").value;
@@ -342,450 +536,254 @@ function rebuildAdvancedPacing() {
   if (!container) return;
 
   if (mode !== "strategy_power") {
-    container.innerHTML =
-      '<p style="margin:0;font-size:14px;color:#555;">Select “Power strategy (advanced)” to see per-segment pacing.</p>';
+    container.innerHTML = '<p style="margin:0;font-size:14px;color:#555;">Select "Power strategy (advanced)" to see per-segment pacing.</p>';
     if (strategyRow) strategyRow.style.display = "none";
     if (strategyVal) strategyVal.textContent = "—";
     return;
   }
 
   const profile = window.currentRouteProfile;
-  if (
-    !profile ||
-    !profile.distances ||
-    profile.distances.length < 2
-  ) {
-    container.innerHTML =
-      '<p style="margin:0;font-size:14px;color:#555;">Advanced pacing needs a selected course with elevation data.</p>';
+  if (!profile || !profile.distances || profile.distances.length < 2) {
+    container.innerHTML = '<p style="margin:0;font-size:14px;color:#555;">Advanced pacing needs a selected course with elevation data.</p>';
     if (strategyRow) strategyRow.style.display = "flex";
     if (strategyVal) strategyVal.textContent = "—";
     return;
   }
-
-  const dist = profile.distances;
-  const elev = profile.elevations;
-  const totalDistKm = dist[dist.length - 1];
 
   const unit = document.getElementById("unit").value;
-  let wind =
-    unit === "metric"
-      ? parseFloat(
-          document.getElementById("wind-metric").value || "0"
-        )
-      : parseFloat(
-          document.getElementById("wind-imperial").value || "0"
-        );
-  wind = unit === "metric" ? wind / 3.6 : wind * 0.44704;
 
-  const tempC =
-    parseFloat(
-      document.getElementById("temperature-c").value || "0"
-    ) || 0;
-  const alt =
-    parseFloat(
-      document.getElementById("altitude").value || "0"
-    ) || 0;
-  const RH =
-    parseFloat(
-      document.getElementById("relHumidity").value || "0"
-    ) || 0;
-  const pOverride_hPa =
-    parseFloat(
-      document.getElementById("pressure-hpa").value || "0"
-    ) || 0;
+  function gNum(id, def) {
+    var el = document.getElementById(id);
+    return el ? (parseFloat(el.value) || def) : def;
+  }
+  function gNumOrNull(id) {
+    var el = document.getElementById(id);
+    if (!el || el.value === "" || el.value === null) return null;
+    var v = parseFloat(el.value);
+    return isNaN(v) ? null : v;
+  }
 
-  const pressurePa = pressureAtAltitude(alt, pOverride_hPa);
-  const rho = moistAirDensity(pressurePa, tempC, RH);
-
-  const rw =
-    parseFloat(
-      document.getElementById("rider-weight-kg").value || "0"
-    ) || 0;
-  const cg =
-    parseFloat(
-      document.getElementById("clothes-gear-kg").value || "0"
-    ) || 0;
-  const bw =
-    parseFloat(
-      document.getElementById("bike-weight-kg").value || "0"
-    ) || 0;
-  const totalWeight = rw + cg + bw;
-
-  const cda =
-    parseFloat(
-      document.getElementById("cdaAeroDynamicResistance")
-        .value || "0.18"
-    ) || 0.18;
-  const crr =
-    parseFloat(
-      document.getElementById("crr_rolling").value || "0.0035"
-    ) || 0.0035;
-  const driveEff =
-    (parseFloat(
-      document.getElementById("driveTrainEfficiency").value ||
-        "98"
-    ) || 98) / 100;
-
-  const ftpAdv =
-    parseFloat(
-      document.getElementById("advanced_ftp").value ||
-        document.getElementById("known_ftp").value ||
-        "0"
-    ) || 0;
-
-  const flatP =
-    parseFloat(
-      document.getElementById("flat_power").value || "0"
-    ) || 0;
-  const climb1P =
-    parseFloat(
-      document.getElementById("climb1_power").value || "0"
-    ) || 0;
-  const climb3P =
-    parseFloat(
-      document.getElementById("climb3_power").value || "0"
-    ) || 0;
-  const climb10P =
-    parseFloat(
-      document.getElementById("climb10_power").value || "0"
-    ) || 0;
-
+  const flatP = gNum("flat_power", 0);
   if (flatP <= 0) {
-    container.innerHTML =
-      '<p style="margin:0;font-size:14px;color:#555;">Set at least a flat power in the advanced box above.</p>';
+    container.innerHTML = '<p style="margin:0;font-size:14px;color:#555;">Set at least a flat power in the advanced box above.</p>';
     if (strategyRow) strategyRow.style.display = "flex";
     if (strategyVal) strategyVal.textContent = "—";
     return;
   }
 
-  const descentP =
-    parseFloat(
-      document.getElementById("descent_power").value || "0"
-    ) || 0;
+  const windRaw = unit === "metric" ? gNum("wind-metric", 0) : gNum("wind-imperial", 0);
+  const windSc_mps = unit === "metric" ? windRaw / 3.6 : windRaw * 0.44704;
+  const windDirRaw = gNumOrNull("wind_dir");  // null = scalar mode
+  const windDirDeg = windDirRaw;
+  const windSpd_mps = Math.abs(windSc_mps);
 
-  let maxDesc =
-    parseFloat(
-      document.getElementById("max_descent_speed").value || "0"
-    ) || 0;
-  let maxDesc_mps = Infinity;
-  if (maxDesc > 0) {
-    maxDesc_mps =
-      unit === "metric"
-        ? maxDesc / 3.6
-        : maxDesc * 0.44704;
+  const tempC = gNum("temperature-c", 20);
+  const pressurePa = pressureAtAltitude(gNum("altitude", 0), gNum("pressure-hpa", 0));
+  const rho = moistAirDensity(pressurePa, tempC, gNum("relHumidity", 0));
+  const rw  = gNum("rider-weight-kg", 0);
+
+  const cfg = {
+    dist: profile.distances,
+    elev: profile.elevations,
+    latlngs: profile.latlngs || null,
+    flatP:    flatP,
+    climb1P:  gNum("climb1_power", 0),
+    climb3P:  gNum("climb3_power", 0),
+    climb10P: gNum("climb10_power", 0),
+    descentP: gNum("descent_power", 0),
+    maxDesc_mps: (function() {
+      var md = gNum("max_descent_speed", 0);
+      if (md <= 0) return Infinity;
+      return unit === "metric" ? md / 3.6 : md * 0.44704;
+    })(),
+    totalWeight: rw + gNum("clothes-gear-kg", 0) + gNum("bike-weight-kg", 0),
+    crr:    gNum("crr_rolling", 0.0035),
+    cda:    gNum("cdaAeroDynamicResistance", 0.18),
+    cdaClimbDelta: gNum("cda_climb_delta", 0),
+    rho:    rho,
+    windScalar:    windSc_mps,
+    windSpeed_mps: windSpd_mps,
+    windDirDeg:    windDirDeg,
+    driveEff: gNum("driveTrainEfficiency", 98) / 100,
+    nLaps:    Math.max(1, Math.round(gNum("n_laps", 1))),
+    powerFadePctPerHr: gNum("power_fade_pct", 0),
+    unit:   unit,
+    checkpointIntervalKm: gNum("checkpoint_km", 0)
+  };
+
+  const result       = runSimulation(cfg);
+  const rows         = result.rows;
+  const totalTimeSec = result.totalTimeSec;
+  const totalDistKm  = result.totalDistKm;
+  const cpTimes      = result.checkpointTimes;
+
+  if (!rows.length) {
+    container.innerHTML = '<p style="margin:0;font-size:14px;color:#555;">Route profile too short to build pacing segments.</p>';
+    if (strategyRow) strategyRow.style.display = "flex";
+    if (strategyVal) strategyVal.textContent = "—";
+    return;
   }
 
-  const targetSegLenKm = totalDistKm >= 120 ? 5 : 3;
-  const steepGrade = 0.08;
-  const minSteepLenKm = 0.7;
-  const segments = [];
-  let segStartIdx = 0;
-  let segStartDist = dist[0];
-
-  for (let i = 1; i < dist.length; i++) {
-    const dKmFromSegStart = dist[i] - segStartDist;
-    const stepKm = dist[i] - dist[i - 1];
-    const stepM = stepKm * 1000;
-    const stepElev = elev[i] - elev[i - 1];
-    const stepGrade = stepM > 0 ? stepElev / stepM : 0;
-    const isSteep =
-      Math.abs(stepGrade) >= steepGrade &&
-      stepKm >= minSteepLenKm;
-    const longEnough =
-      dKmFromSegStart >= targetSegLenKm && i > segStartIdx + 1;
-
-    if (isSteep) {
-      if (i - 1 > segStartIdx) {
-        segments.push({ start: segStartIdx, end: i - 1 });
-      }
-      segments.push({ start: i - 1, end: i });
-      segStartIdx = i;
-      segStartDist = dist[i];
-    } else if (longEnough) {
-      segments.push({ start: segStartIdx, end: i });
-      segStartIdx = i;
-      segStartDist = dist[i];
-    }
-  }
-  if (segStartIdx < dist.length - 1) {
-    segments.push({ start: segStartIdx, end: dist.length - 1 });
+  function fmtTotal(sec) {
+    sec = Math.max(0, sec);
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec - h * 3600) / 60);
+    var s = Math.round(sec - h * 3600 - m * 60);
+    if (s === 60) { s = 0; m++; }
+    if (m === 60) { m = 0; h++; }
+    return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
   }
 
-  let totalTimeSec = 0;
-  const rows = [];
+  const unitDist  = unit === "metric" ? "km" : "mi";
+  const unitSpeed = unit === "metric" ? "km/h" : "mi/h";
+  const showCp    = cfg.checkpointIntervalKm > 0;
+  const showLap   = cfg.nLaps > 1;
+  const cols      = 10 + (showCp ? 1 : 0) + (showLap ? 1 : 0);
 
-  for (let idx = 0; idx < segments.length; idx++) {
-    const s = segments[idx];
-    const dStart = dist[s.start];
-    const dEnd = dist[s.end];
-    const lenKm = Math.max(0.001, dEnd - dStart);
-    const lenM = lenKm * 1000;
+  // ── Pacing table ────────────────────────────────────────────────────────
+  var html = '<table class="advTable"><thead><tr>'
+    + '<th>#</th><th>From (' + unitDist + ')</th><th>To (' + unitDist + ')</th>'
+    + '<th>Len</th><th>Type</th><th>Grade %</th>'
+    + '<th>Power W</th><th>Speed</th><th>Time</th><th>VAM</th>'
+    + (showCp  ? '<th>Cum. time</th>' : '')
+    + (showLap ? '<th>Lap</th>' : '')
+    + '</tr></thead><tbody>';
 
-    const eStart = elev[s.start];
-    const eEnd = elev[s.end];
-    const grade = lenM > 0 ? (eEnd - eStart) / lenM : 0;
+  rows.forEach(function(r, i) {
+    var kStyle = r.kind === "Climb"   ? ' style="color:#dc2626;font-weight:600"'
+               : r.kind === "Descent" ? ' style="color:#2563eb;font-weight:600"' : '';
+    html += '<tr>'
+      + '<td>' + (i + 1) + '</td>'
+      + '<td>' + r.from.toFixed(1) + '</td>'
+      + '<td>' + r.to.toFixed(1)   + '</td>'
+      + '<td>' + r.len.toFixed(1)  + '</td>'
+      + '<td' + kStyle + '>' + r.kind + '</td>'
+      + '<td>' + r.grade.toFixed(1) + '</td>'
+      + '<td>' + r.power.toFixed(0) + '</td>'
+      + '<td>' + r.speed.toFixed(1) + '</td>'
+      + '<td>' + r.timeStr + '</td>'
+      + '<td>' + (r.vam !== null ? r.vam + ' m/h' : '—') + '</td>'
+      + (showCp  ? '<td>' + fmtTotal(r.cumTimeSec) + '</td>' : '')
+      + (showLap ? '<td>' + r.lapNum + '</td>' : '')
+      + '</tr>';
+  });
 
-    let kind = "Flat/rolling";
-    if (grade >= 0.01) kind = "Climb";
-    else if (grade <= -0.01) kind = "Descent";
-
-    let targetW = flatP;
-    let v;
-
-    if (kind === "Descent") {
-      if (descentP <= 0) {
-        // Coast: rider outputs 0W, accelerates to terminal velocity
-        targetW = 0;
-        v = terminalVelocity(grade, totalWeight, crr, cda, rho, wind, driveEff);
-      } else {
-        targetW = descentP;
-        v = solveSpeedForTargetPower(descentP, grade, totalWeight, crr, cda, rho, wind, driveEff);
-      }
-      if (v > maxDesc_mps) v = maxDesc_mps;
-    } else if (kind === "Climb") {
-      const approxP = climb10P > 0 ? climb10P : flatP;
-      let vApprox = solveSpeedForTargetPower(
-        approxP, grade, totalWeight, crr, cda, rho, wind, driveEff
-      );
-      if (vApprox <= 0) vApprox = 5;
-      const approxTimeSec = lenM / vApprox;
-      if (approxTimeSec <= 60 && climb1P > 0) {
-        targetW = climb1P;
-      } else if (approxTimeSec <= 180 && climb3P > 0) {
-        targetW = climb3P;
-      } else if (climb10P > 0) {
-        targetW = climb10P;
-      } else {
-        targetW = flatP;
-      }
-      v = solveSpeedForTargetPower(targetW, grade, totalWeight, crr, cda, rho, wind, driveEff);
-    } else {
-      v = solveSpeedForTargetPower(targetW, grade, totalWeight, crr, cda, rho, wind, driveEff);
-    }
-
-    if (!v || v <= 0) continue;
-
-    const segTimeSec = lenM / v;
-    totalTimeSec += segTimeSec;
-
-    const speedKmh = v * 3.6;
-    const speedDisplay =
-      unit === "metric"
-        ? speedKmh
-        : speedKmh / 1.60934;
-    const lenDisplay =
-      unit === "metric"
-        ? lenKm
-        : lenKm / 1.60934;
-    const startDisplay =
-      unit === "metric"
-        ? dStart
-        : dStart / 1.60934;
-    const endDisplay =
-      unit === "metric" ? dEnd : dEnd / 1.60934;
-
-    const gradePct = grade * 100;
-
-    function fmtTime(sec) {
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec - h * 3600) / 60);
-      const s2 = Math.round(sec - h * 3600 - m * 60);
-      const parts = [];
-      if (h > 0) parts.push(String(h).padStart(2, "0"));
-      parts.push(String(m).padStart(2, "0"));
-      parts.push(String(s2).padStart(2, "0"));
-      return parts.join(":");
-    }
-
-    const elevGainM = eEnd - eStart;
-    const vam = (kind === "Climb" && segTimeSec > 0)
-      ? Math.round(elevGainM / (segTimeSec / 3600))
-      : null;
-
-    rows.push({
-      from: startDisplay,
-      to: endDisplay,
-      len: lenDisplay,
-      kind,
-      grade: gradePct,
-      power: targetW,
-      speed: speedDisplay,
-      time: segTimeSec,
-      timeStr: fmtTime(segTimeSec),
-      vam,
+  // Checkpoint summary block
+  if (cpTimes.length) {
+    html += '<tr><td colspan="' + cols + '" style="background:#eef2ff;font-weight:700;text-align:left;font-size:12px;padding:3px 6px;">📍 Checkpoints</td></tr>';
+    cpTimes.forEach(function(cp) {
+      var cpDist = unit === "metric" ? cp.km.toFixed(1) : (cp.km / 1.60934).toFixed(1);
+      html += '<tr style="background:#eef2ff;font-size:12px;">'
+        + '<td colspan="3">@ ' + cpDist + ' ' + unitDist + '</td>'
+        + '<td colspan="' + (cols - 3) + '">' + fmtTotal(cp.timeSec) + '</td></tr>';
     });
   }
 
-  if (!rows.length) {
-    container.innerHTML =
-      '<p style="margin:0;font-size:14px;color:#555;">Route profile too short to build pacing segments.</p>';
-    if (strategyRow) strategyRow.style.display = "flex";
-    if (strategyVal) strategyVal.textContent = "—";
-    return;
-  }
+  html += '</tbody></table>';
 
-  const unitDistLabel = unit === "metric" ? "km" : "mi";
-  const unitSpeedLabel = unit === "metric" ? "km/h" : "mi/h";
-
-  let html =
-    '<table class="advTable"><thead><tr>' +
-    "<th>#</th><th>From (" +
-    unitDistLabel +
-    ")</th><th>To (" +
-    unitDistLabel +
-    ")</th>" +
-    "<th>Len (" +
-    unitDistLabel +
-    ')</th><th>Type</th><th>Grade (%)</th>' +
-    "<th>Power (W)</th><th>Speed (" +
-    unitSpeedLabel +
-    ")</th><th>Time</th><th>VAM</th></tr></thead><tbody>";
-
-  rows.forEach((r, i) => {
-    html +=
-      "<tr>" +
-      "<td>" +
-      (i + 1) +
-      "</td>" +
-      "<td>" +
-      r.from.toFixed(1) +
-      "</td>" +
-      "<td>" +
-      r.to.toFixed(1) +
-      "</td>" +
-      "<td>" +
-      r.len.toFixed(1) +
-      "</td>" +
-      "<td>" +
-      r.kind +
-      "</td>" +
-      "<td>" +
-      r.grade.toFixed(1) +
-      "</td>" +
-      "<td>" +
-      r.power.toFixed(0) +
-      "</td>" +
-      "<td>" +
-      r.speed.toFixed(1) +
-      "</td>" +
-      "<td>" +
-      r.timeStr +
-      "</td>" +
-      "<td>" +
-      (r.vam !== null ? r.vam + " m/h" : "—") +
-      "</td>" +
-      "</tr>";
-  });
-
-  function fmtTotal(sec) {
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec - h * 3600) / 60);
-    const s2 = Math.round(sec - h * 3600 - m * 60);
-    return (
-      String(h).padStart(2, "0") +
-      ":" +
-      String(m).padStart(2, "0") +
-      ":" +
-      String(s2).padStart(2, "0")
-    );
-  }
-
-  // ── Core metrics from segment data ──────────────────────────
+  // ── Derived metrics ──────────────────────────────────────────────────────
   const stratAvgW = rows.reduce(function(s, r) { return s + r.power * r.time; }, 0) / Math.max(1, totalTimeSec);
   const stratAvgSpeedKmh = totalDistKm / Math.max(0.0001, totalTimeSec / 3600);
-  const stratAvgSpeedDisplay = unit === "metric" ? stratAvgSpeedKmh : stratAvgSpeedKmh / 1.60934;
-
-  // Normalized Power (approximated from segment blocks, 4th-power weighted)
+  const stratAvgSpeedDisp = unit === "metric" ? stratAvgSpeedKmh : stratAvgSpeedKmh / 1.60934;
   const np4avg = rows.reduce(function(s, r) { return s + Math.pow(r.power, 4) * r.time; }, 0) / Math.max(1, totalTimeSec);
   const NP = Math.pow(Math.max(0, np4avg), 0.25);
   const VI = stratAvgW > 0 ? NP / stratAvgW : 1;
-
-  // Total mechanical energy (kJ) — descents at 0W contribute 0
   const totalEnergyKJ = rows.reduce(function(s, r) { return s + r.power * r.time; }, 0) / 1000;
 
-  // Course split (in display units)
-  var climbLen = 0, descentLen = 0, flatLen = 0;
-  rows.forEach(function(r) {
-    if (r.kind === "Climb") climbLen += r.len;
-    else if (r.kind === "Descent") descentLen += r.len;
-    else flatLen += r.len;
-  });
+  html += '<p class="advSummaryLine">Total: <strong>' + fmtTotal(totalTimeSec)
+    + '</strong> · Avg speed: <strong>' + stratAvgSpeedDisp.toFixed(2) + ' ' + unitSpeed
+    + '</strong> · Avg W: <strong>' + stratAvgW.toFixed(0)
+    + ' W</strong> · NP: <strong>' + NP.toFixed(0)
+    + ' W</strong> · VI: <strong>' + VI.toFixed(2) + '</strong></p>';
 
-  // Power zones (time in seconds per Yousuli zone)
-  const ftpStrat = Math.max(1, parseFloat(document.getElementById("known_ftp").value || "1") || 1);
+  // ── Slowest / fastest segments ───────────────────────────────────────────
+  if (rows.length >= 4) {
+    var sorted = rows.slice().sort(function(a, b) { return a.speed - b.speed; });
+    var n3 = Math.min(3, Math.floor(rows.length / 4));
+    html += '<div style="margin-top:8px;font-size:12px;line-height:1.7;">'
+      + '<strong style="color:#dc2626;">🐢 Slowest:</strong> '
+      + sorted.slice(0, n3).map(function(r) {
+          return r.from.toFixed(1) + '–' + r.to.toFixed(1) + ' ' + unitDist + ' @ ' + r.speed.toFixed(1) + ' ' + unitSpeed;
+        }).join(' &nbsp;·&nbsp; ')
+      + '<br><strong style="color:#16a34a;">🚀 Fastest:</strong> '
+      + sorted.slice(-n3).reverse().map(function(r) {
+          return r.from.toFixed(1) + '–' + r.to.toFixed(1) + ' ' + unitDist + ' @ ' + r.speed.toFixed(1) + ' ' + unitSpeed;
+        }).join(' &nbsp;·&nbsp; ')
+      + '</div>';
+  }
+
+  // ── Zone bar ─────────────────────────────────────────────────────────────
+  const ftp = Math.max(1, gNum("known_ftp", 1));
   var zoneSec = YOUSULI_ZONES.map(function() { return 0; });
   var coastSec = 0;
   rows.forEach(function(r) {
-    var zi = classifyZone(r.power / ftpStrat);
-    if (zi < 0) coastSec += r.time;
-    else zoneSec[zi] += r.time;
+    var zi = classifyZone(r.power / ftp);
+    if (zi < 0) coastSec += r.time; else zoneSec[zi] += r.time;
   });
-  var zoneHtml = buildZoneBarHTML(zoneSec, coastSec, totalTimeSec);
+  html += buildZoneBarHTML(zoneSec, coastSec, totalTimeSec);
 
-  // ── Assemble final HTML ──────────────────────────────────────
-  html += "</tbody></table>";
-  html += '<p class="advSummaryLine">Total time: <strong>' + fmtTotal(totalTimeSec) +
-    "</strong> &nbsp;&middot;&nbsp; Avg speed: <strong>" + stratAvgSpeedDisplay.toFixed(2) + " " + unitSpeedLabel +
-    "</strong> &nbsp;&middot;&nbsp; Avg W: <strong>" + stratAvgW.toFixed(0) +
-    " W</strong> &nbsp;&middot;&nbsp; NP: <strong>" + NP.toFixed(0) +
-    " W</strong> &nbsp;&middot;&nbsp; VI: <strong>" + VI.toFixed(2) + "</strong></p>";
-  html += zoneHtml;
+  // ── Nutrition estimate ────────────────────────────────────────────────────
+  const timeH   = totalTimeSec / 3600;
+  const kcal    = Math.round(totalEnergyKJ);
+  const carbsG  = Math.round(timeH * 75);
+  const fluidML = Math.round(timeH * (tempC >= 25 ? 800 : 600));
+  html += '<div style="margin-top:8px;padding:6px 8px;background:#f5f3ff;border-radius:6px;font-size:12px;color:#6d28d9;">'
+    + '🍌 <strong>Nutrition est.:</strong> ~' + kcal + ' kcal &nbsp;·&nbsp; ~' + carbsG + ' g carbs'
+    + ' &nbsp;·&nbsp; ~' + (fluidML / 1000).toFixed(1) + ' L fluid'
+    + ' <em>(' + (tempC >= 25 ? 'hot' : 'moderate') + ' conditions)</em></div>';
 
   container.innerHTML = html;
 
+  // ── Sensitivity table (in its own section) ────────────────────────────────
+  var sensEl = document.getElementById("sensSection");
+  if (sensEl) {
+    sensEl.style.display = "block";
+    buildSensitivityTable(cfg, totalTimeSec, stratAvgW);
+  }
+
+  // ── Strategy finish time row ──────────────────────────────────────────────
   if (strategyRow) strategyRow.style.display = "flex";
   if (strategyVal) strategyVal.textContent = fmtTotal(totalTimeSec);
 
-  // ── Override main results panel with strategy-accurate values ──
-  var speedEl = document.getElementById("speed");
-  if (speedEl) speedEl.textContent = stratAvgSpeedDisplay.toFixed(2) + (unit === "metric" ? " km/h" : " mi/h");
+  // ── Override main results panel ───────────────────────────────────────────
+  (function() {
+    var set = function(id, txt) { var e = document.getElementById(id); if (e) e.textContent = txt; };
+    set("speed",    stratAvgSpeedDisp.toFixed(2) + (unit === "metric" ? " km/h" : " mi/h"));
+    set("avg_w",    stratAvgW.toFixed(1) + " W");
+    set("avg_w_kg", (rw > 0 ? (stratAvgW / rw).toFixed(2) : "0.00") + " W/kg");
+    var IF  = stratAvgW / ftp;
+    var TSS = timeH * IF * IF * 100;
+    set("intensity",  IF.toFixed(2) + " IF");
+    set("stressScore", TSS.toFixed(2));
+    var ratio = TSS / Math.max(1, gNum("fitnessValue", 1));
+    set("workoutDesc", ratio > 2.01 ? "Extreme workout" : ratio > 1.5 ? "Hard workout" :
+        ratio > 1.25 ? "Moderately hard workout" : ratio > 0.75 ? "Average workout" : "Easy workout");
+    set("energyKJ",        totalEnergyKJ.toFixed(0) + " kJ");
+    set("normalizedPower", NP.toFixed(0) + " W");
+    set("variabilityIndex", VI.toFixed(3));
+    var dl = unit === "metric" ? " km" : " mi";
+    var cL = 0, dL = 0, fL = 0;
+    rows.forEach(function(r) {
+      if (r.kind === "Climb") cL += r.len;
+      else if (r.kind === "Descent") dL += r.len;
+      else fL += r.len;
+    });
+    set("courseSplit", "↑ " + cL.toFixed(1) + dl + " · → " + fL.toFixed(1) + dl + " · ↓ " + dL.toFixed(1) + dl);
+    set("nutritionEst", "~" + kcal + " kcal · " + carbsG + " g carbs · " + (fluidML / 1000).toFixed(1) + " L");
+    ["npRow","viRow","courseSplitRow","nutritionRow"].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.style.display = "flex";
+    });
+  })();
 
-  var avgWEl = document.getElementById("avg_w");
-  if (avgWEl) avgWEl.textContent = stratAvgW.toFixed(1) + " W";
+  // ── Store result for A/B ──────────────────────────────────────────────────
+  window._lastSimResult = {
+    cfg: cfg, totalTimeSec: totalTimeSec, stratAvgW: stratAvgW,
+    NP: NP, VI: VI, rows: rows, totalDistKm: totalDistKm
+  };
 
-  var rwStrat = parseFloat(document.getElementById("rider-weight-kg").value || "0") || 0;
-  var avgWkgEl = document.getElementById("avg_w_kg");
-  if (avgWkgEl) avgWkgEl.textContent = (rwStrat > 0 ? (stratAvgW / rwStrat) : 0).toFixed(2) + " W/kg";
-
-  var IFstrat = stratAvgW / ftpStrat;
-  var timeHstrat = totalTimeSec / 3600;
-  var TSSstrat = timeHstrat * IFstrat * IFstrat * 100;
-  var fitnessStrat = Math.max(1, parseFloat(document.getElementById("fitnessValue").value || "1") || 1);
-  var ratioStrat = TSSstrat / fitnessStrat;
-  var descStrat = "Easy workout";
-  if (ratioStrat > 2.01) descStrat = "Extreme workout";
-  else if (ratioStrat > 1.5) descStrat = "Hard workout";
-  else if (ratioStrat > 1.25) descStrat = "Moderately hard workout";
-  else if (ratioStrat > 0.75) descStrat = "Average workout";
-
-  var intEl = document.getElementById("intensity");
-  if (intEl) intEl.textContent = IFstrat.toFixed(2) + " IF";
-  var tssEl = document.getElementById("stressScore");
-  if (tssEl) tssEl.textContent = TSSstrat.toFixed(2);
-  var descEl2 = document.getElementById("workoutDesc");
-  if (descEl2) descEl2.textContent = descStrat;
-
-  // New metrics
-  var eKJ = document.getElementById("energyKJ");
-  if (eKJ) eKJ.textContent = totalEnergyKJ.toFixed(0) + " kJ";
-
-  var npEl = document.getElementById("normalizedPower");
-  if (npEl) npEl.textContent = NP.toFixed(0) + " W";
-  var viEl = document.getElementById("variabilityIndex");
-  if (viEl) viEl.textContent = VI.toFixed(3);
-
-  var distLabel = unit === "metric" ? " km" : " mi";
-  var csEl = document.getElementById("courseSplit");
-  if (csEl) csEl.textContent =
-    "↑ " + climbLen.toFixed(1) + distLabel +
-    " · → " + flatLen.toFixed(1) + distLabel +
-    " · ↓ " + descentLen.toFixed(1) + distLabel;
-
-  // Show strategy-only rows
-  ["npRow","viRow","courseSplitRow"].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.style.display = "flex";
-  });
+  // ── Show A/B section ──────────────────────────────────────────────────────
+  var abSec = document.getElementById("abSection");
+  if (abSec) abSec.style.display = "block";
 }
 
 /* --- Technical challenges --- */
@@ -1048,6 +1046,147 @@ function rebuildTechnicalChallenges() {
   }
 
   container.innerHTML = html;
+}
+
+/* ─── Utility: format seconds → HH:MM:SS ─── */
+function fmtSecToHMS(sec) {
+  sec = Math.max(0, sec);
+  var h = Math.floor(sec / 3600);
+  var m = Math.floor((sec - h * 3600) / 60);
+  var s = Math.round(sec - h * 3600 - m * 60);
+  if (s === 60) { s = 0; m++; }
+  if (m === 60) { m = 0; h++; }
+  return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+}
+
+/* ─── Sensitivity / what-if table ─────────────────────────────────── */
+function buildSensitivityTable(baseCfg, baseTimeSec, baseAvgW) {
+  var el = document.getElementById("sensTableInner");
+  if (!el) return;
+  var unit     = baseCfg.unit || "metric";
+  var unitSpd  = unit === "metric" ? "km/h" : "mi/h";
+  var totalDst = baseCfg.dist[baseCfg.dist.length - 1] * (baseCfg.nLaps || 1);
+
+  function speedFromResult(r) {
+    var distDisp = unit === "metric" ? r.totalDistKm : r.totalDistKm / 1.60934;
+    return distDisp / Math.max(0.001, r.totalTimeSec / 3600);
+  }
+  function runDelta(patch, label) {
+    // Merge patch into a shallow copy; for object fields, merge one level deep
+    var c2 = Object.assign({}, baseCfg, patch);
+    var r2 = runSimulation(c2);
+    var dt = r2.totalTimeSec - baseTimeSec;
+    return { label: label, timeSec: r2.totalTimeSec, dt: dt, speed: speedFromResult(r2) };
+  }
+  function fmtDt(dt) {
+    var sign = dt > 0 ? "+" : "−";
+    var abs  = Math.abs(dt);
+    var mm   = Math.floor(abs / 60);
+    var ss   = Math.round(abs % 60);
+    return sign + String(mm).padStart(2,"0") + ":" + String(ss).padStart(2,"0");
+  }
+
+  var baseSpd = speedFromResult({ totalDistKm: totalDst, totalTimeSec: baseTimeSec });
+
+  var scenarios = [
+    { label: "✅ Base (current)", timeSec: baseTimeSec, dt: 0, speed: baseSpd, isBase: true },
+    runDelta({
+      flatP:    baseCfg.flatP    * 1.05,
+      climb1P:  baseCfg.climb1P  * 1.05,
+      climb3P:  baseCfg.climb3P  * 1.05,
+      climb10P: baseCfg.climb10P * 1.05
+    }, "⚡ +5% power"),
+    runDelta({
+      flatP:    baseCfg.flatP    * 0.95,
+      climb1P:  baseCfg.climb1P  * 0.95,
+      climb3P:  baseCfg.climb3P  * 0.95,
+      climb10P: baseCfg.climb10P * 0.95
+    }, "🔋 −5% power"),
+    runDelta({ totalWeight: baseCfg.totalWeight - 2 }, "⚖ −2 kg weight"),
+    runDelta({ totalWeight: baseCfg.totalWeight + 2 }, "⚖ +2 kg weight"),
+    runDelta({ cda: baseCfg.cda - 0.02 }, "💨 CdA −0.02 m²"),
+    runDelta({ cda: baseCfg.cda + 0.02 }, "🌬 CdA +0.02 m²"),
+    runDelta({ windScalar: baseCfg.windScalar - (3 / 3.6), windSpeed_mps: Math.max(0, baseCfg.windSpeed_mps - (3/3.6)) }, "🌀 Wind −3 km/h"),
+    runDelta({ windScalar: baseCfg.windScalar + (3 / 3.6), windSpeed_mps: baseCfg.windSpeed_mps + (3/3.6) }, "🌀 Wind +3 km/h"),
+  ];
+
+  var html = '<table class="sensTable"><thead><tr>'
+    + '<th>Scenario</th><th>Finish time</th><th>Δ time</th><th>Avg speed (' + unitSpd + ')</th>'
+    + '</tr></thead><tbody>';
+
+  scenarios.forEach(function(sc) {
+    var rowCls = sc.isBase ? ' class="sens-base"' : '';
+    var dtCell = sc.isBase ? '—'
+      : '<span class="' + (sc.dt < 0 ? 'sens-faster' : 'sens-slower') + '">' + fmtDt(sc.dt) + '</span>';
+    html += '<tr' + rowCls + '>'
+      + '<td>' + sc.label + '</td>'
+      + '<td>' + fmtSecToHMS(sc.timeSec) + '</td>'
+      + '<td>' + dtCell + '</td>'
+      + '<td>' + sc.speed.toFixed(2) + '</td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table>';
+  html += '<p style="font-size:11px;color:#888;margin-top:4px;">Deltas relative to current strategy. Green = faster, red = slower.</p>';
+  el.innerHTML = html;
+}
+
+/* ─── Strategy A vs B comparison ──────────────────────────────────── */
+window._stratA = null;
+
+function saveStrategyA() {
+  var res = window._lastSimResult;
+  if (!res) { alert("Run a strategy calculation first."); return; }
+  window._stratA = JSON.parse(JSON.stringify({
+    totalTimeSec: res.totalTimeSec,
+    stratAvgW:    res.stratAvgW,
+    NP:           res.NP,
+    VI:           res.VI,
+    totalDistKm:  res.totalDistKm
+  }));
+  var el = document.getElementById("abResults");
+  if (el) el.innerHTML = '<p style="color:#166534;font-weight:600;">📌 Strategy A saved: '
+    + fmtSecToHMS(res.totalTimeSec) + ' · ' + res.stratAvgW.toFixed(0) + ' W avg · NP '
+    + res.NP.toFixed(0) + ' W · VI ' + res.VI.toFixed(3)
+    + '</p><p style="margin-top:4px;">Adjust your inputs, recalculate, then click "Compare current as B".</p>';
+}
+
+function compareStrategyB() {
+  if (!window._stratA) { alert("Save Strategy A first."); return; }
+  var res = window._lastSimResult;
+  if (!res) { alert("Run a strategy calculation first."); return; }
+  var A = window._stratA, B = res;
+  var dt = B.totalTimeSec - A.totalTimeSec;
+  var dtStr = dt < 0 ? ("−" + fmtSecToHMS(-dt) + " <em>(B is faster)</em>")
+                     : ("+" + fmtSecToHMS(dt)  + " <em>(A is faster)</em>");
+  function abRow(metric, vA, vB, delta, bWins) {
+    var aC = (bWins === false) ? ' class="ab-win"' : '';
+    var bC = (bWins === true)  ? ' class="ab-win"' : '';
+    return '<tr><td>' + metric + '</td><td' + aC + '>' + vA + '</td><td' + bC + '>' + vB + '</td><td>' + delta + '</td></tr>';
+  }
+  var unitSpd = (window._lastSimResult && window._lastSimResult.cfg && window._lastSimResult.cfg.unit === "imperial") ? "mi/h" : "km/h";
+  var spdA = A.totalDistKm / Math.max(0.001, A.totalTimeSec / 3600);
+  var spdB = B.totalDistKm / Math.max(0.001, B.totalTimeSec / 3600);
+  var html = '<table class="abResultsWrap" style="width:100%;border-collapse:collapse;">'
+    + '<thead><tr><th>Metric</th><th>Strategy A</th><th>Strategy B</th><th>Delta (B−A)</th></tr></thead><tbody>'
+    + abRow("Finish time", fmtSecToHMS(A.totalTimeSec), fmtSecToHMS(B.totalTimeSec), dtStr, dt < 0)
+    + abRow("Avg speed (" + unitSpd + ")", spdA.toFixed(2), spdB.toFixed(2),
+        ((spdB - spdA) >= 0 ? "+" : "") + (spdB - spdA).toFixed(2), spdB > spdA)
+    + abRow("Avg W", A.stratAvgW.toFixed(0) + " W", B.stratAvgW.toFixed(0) + " W",
+        ((B.stratAvgW - A.stratAvgW) >= 0 ? "+" : "") + (B.stratAvgW - A.stratAvgW).toFixed(0) + " W", null)
+    + abRow("NP", A.NP.toFixed(0) + " W", B.NP.toFixed(0) + " W",
+        ((B.NP - A.NP) >= 0 ? "+" : "") + (B.NP - A.NP).toFixed(0) + " W", null)
+    + abRow("VI (lower = steadier)", A.VI.toFixed(3), B.VI.toFixed(3),
+        ((B.VI - A.VI) >= 0 ? "+" : "") + (B.VI - A.VI).toFixed(3), B.VI < A.VI)
+    + '</tbody></table>';
+  var el = document.getElementById("abResults");
+  if (el) el.innerHTML = html;
+}
+
+function clearAB() {
+  window._stratA = null;
+  var el = document.getElementById("abResults");
+  if (el) el.innerHTML = 'Load a route and configure powers, then save Strategy A, adjust values, and compare as B.';
 }
 
 /* ------------- main physics result --------------- */
@@ -1447,35 +1586,51 @@ function updateChartUnits(units) {
   const yminDisplay = isImperial ? yminRaw * 3.28084 : yminRaw;
   const ymaxDisplay = isImperial ? ymaxRaw * 3.28084 : ymaxRaw;
 
+  // Compute per-point grades for gradient coloring
+  var rawElev = window.currentRouteProfile ? (window.currentRouteProfile.elevations || []) : [];
+  var rawDist = window.currentRouteProfile ? (window.currentRouteProfile.distances   || []) : [];
+  var grades = rawElev.map(function(_, i) {
+    if (i === 0 || i >= rawDist.length) return 0;
+    var dM = (rawDist[i] - rawDist[i - 1]) * 1000;
+    return dM > 0 ? (rawElev[i] - rawElev[i - 1]) / dM : 0;
+  });
+  window._chartGrades = grades;
+
   elevChart.data.labels = distDisplay;
   elevChart.data.datasets[0].data = elevDisplay;
 
-  elevChart.options.scales.x.title.text = isImperial
-    ? "Distance (mi)"
-    : "Distance (km)";
-  elevChart.options.scales.y.title.text = isImperial
-    ? "Elevation (ft)"
-    : "Elevation (m)";
+  // Grade-based segment colours (Chart.js 3 `segment` option)
+  elevChart.data.datasets[0].segment = {
+    borderColor: function(ctx) {
+      var g = (window._chartGrades || [])[ctx.p0DataIndex] || 0;
+      if (g >  0.08) return '#dc2626'; // steep climb
+      if (g >  0.04) return '#f97316'; // moderate climb
+      if (g >  0.01) return '#fde047'; // easy climb
+      if (g < -0.08) return '#1d4ed8'; // steep descent
+      if (g < -0.04) return '#22d3ee'; // moderate descent
+      if (g < -0.01) return '#4ade80'; // easy descent
+      return '#6b7280';                // flat
+    }
+  };
+  elevChart.data.datasets[0].borderWidth = 2.5;
+
+  elevChart.options.scales.x.title.text = isImperial ? "Distance (mi)" : "Distance (km)";
+  elevChart.options.scales.y.title.text = isImperial ? "Elevation (ft)" : "Elevation (m)";
   elevChart.options.scales.y.min = yminDisplay;
   elevChart.options.scales.y.max = ymaxDisplay;
 
   elevChart.options.plugins.tooltip.callbacks.title = (items) => {
     if (!items.length) return "";
     const label = items[0].label;
-    const val =
-      (typeof label === "number"
-        ? label
-        : parseFloat(label)) || 0;
-    return (isImperial ? "mi " : "km ") + val.toFixed(2);
+    const val = (typeof label === "number" ? label : parseFloat(label)) || 0;
+    var g = (window._chartGrades || [])[items[0].dataIndex] || 0;
+    var gStr = " (grade: " + (g * 100).toFixed(1) + "%)";
+    return (isImperial ? "mi " : "km ") + val.toFixed(2) + gStr;
   };
 
   elevChart.options.plugins.tooltip.callbacks.label = (item) => {
     const y = item.parsed.y || 0;
-    return (
-      "Elevation: " +
-      y.toFixed(0) +
-      (isImperial ? " ft" : " m")
-    );
+    return "Elevation: " + y.toFixed(0) + (isImperial ? " ft" : " m");
   };
 
   elevChart.update();

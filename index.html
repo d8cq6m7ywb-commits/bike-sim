@@ -478,6 +478,99 @@
         color: #92400e;
         margin-top: 4px;
       }
+
+      /* ─── Sensitivity / what-if table ─── */
+      .sensSection {
+        margin-top: 14px;
+        padding: 12px 16px;
+        background: #f8faff;
+        border-radius: 8px;
+        border: 1px solid #dde3ff;
+      }
+      .sensSection h3 {
+        font-size: 15px;
+        color: #083258;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .sensTable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .sensTable th, .sensTable td {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        text-align: right;
+      }
+      .sensTable th { background: #eef2ff; text-align: center; }
+      .sensTable td:first-child, .sensTable th:first-child { text-align: left; }
+      .sensTable tr.sens-base { background: #fffde7; font-weight: 700; }
+      .sensTable .sens-faster { color: #16a34a; font-weight: 700; }
+      .sensTable .sens-slower { color: #dc2626; font-weight: 700; }
+
+      /* ─── A vs B comparison ─── */
+      .abSection {
+        margin-top: 14px;
+        padding: 12px 16px;
+        background: #f0fdf4;
+        border-radius: 8px;
+        border: 1px solid #bbf7d0;
+      }
+      .abSection h3 {
+        font-size: 15px;
+        color: #166534;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .abBtns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+      .abBtns button {
+        padding: 5px 13px;
+        border-radius: 6px;
+        border: 1px solid #166534;
+        background: #fff;
+        color: #166534;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .abBtns button:hover { background: #166534; color: #fff; }
+      .abResultsWrap { font-size: 13px; }
+      .abResultsWrap table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+      .abResultsWrap td, .abResultsWrap th {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+        font-size: 13px;
+      }
+      .abResultsWrap th { background: #dcfce7; text-align: center; }
+      .ab-win { color: #16a34a; font-weight: 700; }
+      .ab-lose { color: #dc2626; }
+
+      /* ─── Print button ─── */
+      .printBtn {
+        padding: 7px 16px;
+        border-radius: 6px;
+        border: 1px solid #083258;
+        background: #fff;
+        color: #083258;
+        font-size: 13px;
+        cursor: pointer;
+        align-self: flex-start;
+      }
+      .printBtn:hover { background: #083258; color: #fff; }
+
+      /* ─── Print media query ─── */
+      @media print {
+        body { background: #fff; padding: 0; }
+        .route__selector, .calcMode__wrapper, .advanced__wrapper,
+        .col__calc, .courseToggleBtn, .printBtn, #map,
+        .abSection, .techChallenges__section, .notes,
+        button:not(.printBtn) { display: none !important; }
+        .wrapper__calc { box-shadow: none; padding: 10px; }
+        .courseAnalysis--hidden { display: block !important; }
+        #chart-wrapper { height: 200px !important; page-break-inside: avoid; }
+        .advancedPacing__section { page-break-inside: avoid; }
+        .sensSection { page-break-inside: avoid; }
+      }
     </style>
   </head>
   <body>
@@ -683,6 +776,93 @@
             </div>
             <div class="notes">
               Caps speed on descents in the advanced pacing table.
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Wind direction (from)</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="wind_dir"
+                class="input__calc"
+                placeholder="n/a"
+                min="0"
+                max="359"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">°</span>
+            </div>
+            <div class="notes">
+              0 = N, 90 = E, 180 = S, 270 = W. Leave blank to use the scalar wind field.
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Number of laps</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="n_laps"
+                class="input__calc"
+                value="1"
+                min="1"
+                max="20"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">laps</span>
+            </div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Power fade</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="power_fade_pct"
+                class="input__calc"
+                value="0"
+                min="0"
+                max="20"
+                step="0.5"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">%/hr</span>
+            </div>
+            <div class="notes">Linear power reduction per hour. 0 = none.</div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Extra CdA on climbs ≥ 4%</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="cda_climb_delta"
+                class="input__calc"
+                value="0"
+                min="0"
+                step="0.01"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">m²</span>
+            </div>
+            <div class="notes">Additional drag area when seated on steep climbs. 0 = off.</div>
+          </div>
+
+          <div class="row__calc">
+            <label class="label__calc">Checkpoint every</label>
+            <div class="combined__calc">
+              <input
+                type="number"
+                id="checkpoint_km"
+                class="input__calc"
+                value="0"
+                min="0"
+                max="200"
+                step="5"
+                onchange="calculateResult();"
+              />
+              <span class="unit__calc">km (0 = off)</span>
             </div>
           </div>
         </div>
@@ -1044,7 +1224,7 @@
               />
             </div>
             <div class="notes">
-              Used only for the rough “workout” label below.
+              Used only for the rough "workout" label below.
             </div>
           </div>
 
@@ -1132,6 +1312,10 @@
             <span class="res__label">Course split</span
             ><span class="res__value" id="courseSplit">—</span>
           </div>
+          <div class="row__res--calc" id="nutritionRow" style="display:none">
+            <span class="res__label">🍌 Nutrition estimate</span
+            ><span class="res__value" id="nutritionEst" style="font-size:15px;color:#6d28d9;">—</span>
+          </div>
         </div>
 
         <div class="notes">
@@ -1140,6 +1324,22 @@
           saturation vapor pressure → partial pressures). Rolling resistance
           uses the normal force on a grade (× cos θ). Headwind positive, tailwind
           negative; drag depends on relative airspeed.
+        </div>
+
+        <!-- Print / export -->
+        <button class="printBtn" onclick="window.print()">🖨 Print / Save PDF</button>
+
+        <!-- Strategy A vs B comparison -->
+        <div class="abSection" id="abSection" style="display:none">
+          <h3>Strategy A vs B comparison</h3>
+          <div class="abBtns">
+            <button onclick="saveStrategyA()">📌 Save as Strategy A</button>
+            <button onclick="compareStrategyB()">🔄 Compare current as B</button>
+            <button onclick="clearAB()" style="border-color:#92400e;color:#92400e;">✕ Clear</button>
+          </div>
+          <div id="abResults" class="abResultsWrap">
+            Load a route and configure powers, then save Strategy A, adjust values, and compare as B.
+          </div>
         </div>
 
         <button id="toggleCourseAnalysis" class="courseToggleBtn">
@@ -1163,8 +1363,16 @@
           <section class="advancedPacing__section">
             <h3 class="heading__tertiary--calc">Advanced pacing (beta)</h3>
             <div id="advancedPacing" class="advanced-pacing-placeholder">
-              Advanced pacing will appear here when you select “Power strategy
-              (advanced)” and a route.
+              Advanced pacing will appear here when you select "Power strategy
+              (advanced)" and a route.
+            </div>
+          </section>
+
+          <!-- Sensitivity / what-if table -->
+          <section class="sensSection" id="sensSection" style="display:none">
+            <h3>What-if sensitivity table</h3>
+            <div id="sensTableInner">
+              <p style="font-size:13px;color:#555;">Run a strategy calculation to populate this table.</p>
             </div>
           </section>
 
