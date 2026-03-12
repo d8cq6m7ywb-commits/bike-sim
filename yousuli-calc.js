@@ -1836,6 +1836,20 @@ async function loadRoute(key) {
       if (altEl) altEl.value = Math.round(startAlt);
     }
 
+    // Auto-populate historical temperature & humidity from route meta
+    if (typeof meta.tempC === "number") {
+      const tcEl = document.getElementById("temperature-c");
+      const tfEl = document.getElementById("temperature-f");
+      if (tcEl) {
+        tcEl.value = meta.tempC;
+        if (tfEl) tfEl.value = ((meta.tempC * 9 / 5) + 32).toFixed(1);
+      }
+    }
+    if (typeof meta.humidity === "number") {
+      const rhEl = document.getElementById("relHumidity");
+      if (rhEl) rhEl.value = meta.humidity;
+    }
+
     const distTot =
       typeof r.distance_km === "number" &&
       r.distance_km > 0
